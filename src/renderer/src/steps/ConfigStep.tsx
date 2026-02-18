@@ -15,7 +15,7 @@ export default function ConfigStep({ onDone }: { onDone: () => void }): React.JS
   const { logs, clearLogs } = useInstallLogs()
 
   const apiKeyValid = API_KEY_PATTERN.test(apiKey)
-  const botTokenValid = botToken === '' || BOT_TOKEN_PATTERN.test(botToken)
+  const botTokenValid = BOT_TOKEN_PATTERN.test(botToken)
   const canSave = apiKeyValid && botTokenValid && !saving
 
   const handleSave = async (): Promise<void> => {
@@ -61,7 +61,7 @@ export default function ConfigStep({ onDone }: { onDone: () => void }): React.JS
 
       <div className="space-y-1.5">
         <label className="text-sm font-bold">
-          Telegram Bot Token <span className="text-text-muted/50 text-xs font-normal">선택</span>
+          Telegram Bot Token <span className="text-error text-xs">필수</span>
         </label>
         <input
           type="text"

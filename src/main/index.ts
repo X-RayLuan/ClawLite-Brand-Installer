@@ -4,6 +4,8 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { registerIpcHandlers } from './ipc-handlers'
 import icon from '../../resources/icon.png?asset'
 
+let ipcRegistered = false
+
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 520,
@@ -29,7 +31,10 @@ function createWindow(): void {
     return { action: 'deny' }
   })
 
-  registerIpcHandlers(mainWindow)
+  if (!ipcRegistered) {
+    registerIpcHandlers(mainWindow)
+    ipcRegistered = true
+  }
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])

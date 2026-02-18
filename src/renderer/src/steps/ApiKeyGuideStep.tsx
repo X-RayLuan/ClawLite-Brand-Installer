@@ -23,12 +23,20 @@ const steps = [
   }
 ]
 
-export default function ApiKeyGuideStep({ onNext }: { onNext: () => void }): React.JSX.Element {
+export default function ApiKeyGuideStep({ onNext, onPrev }: { onNext: () => void; onPrev: () => void }): React.JSX.Element {
   return (
     <div className="flex-1 flex flex-col px-8 gap-4 justify-center">
       <div className="text-center space-y-1">
         <h2 className="text-lg font-extrabold">Anthropic API 키 발급</h2>
         <p className="text-text-muted text-xs">AI 모델(Claude)을 사용하려면 API 키가 필요합니다</p>
+        <a
+          href="https://console.anthropic.com/settings/keys"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-block text-primary text-xs font-semibold hover:text-primary-light transition-colors pt-1"
+        >
+          콘솔 바로가기 &rarr;
+        </a>
       </div>
 
       <div className="space-y-2.5 mt-1">
@@ -46,14 +54,15 @@ export default function ApiKeyGuideStep({ onNext }: { onNext: () => void }): Rea
       </div>
 
       <div className="flex justify-between items-center mt-2">
-        <a
-          href="https://console.anthropic.com/settings/keys"
-          target="_blank"
-          rel="noreferrer"
-          className="text-primary text-xs font-semibold hover:text-primary-light transition-colors"
+        <button
+          onClick={onPrev}
+          className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-text-muted hover:text-text bg-white/5 hover:bg-white/10 rounded-xl border border-glass-border transition-all duration-200"
         >
-          콘솔 바로가기 &rarr;
-        </a>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          이전
+        </button>
         <Button variant="primary" size="lg" onClick={onNext}>
           키 준비 완료!
         </Button>

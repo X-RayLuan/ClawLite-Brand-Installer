@@ -59,6 +59,7 @@ export const runOnboard = async (
   const onboardArgs = [
     'onboard',
     '--non-interactive',
+    '--accept-risk',
     '--mode', 'local',
     '--auth-choice', 'apiKey',
     '--anthropic-api-key', config.anthropicApiKey,
