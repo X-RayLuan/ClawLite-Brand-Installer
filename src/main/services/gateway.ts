@@ -1,5 +1,6 @@
 import { spawn } from 'child_process'
 import { platform } from 'os'
+import { join } from 'path'
 
 const getPathEnv = (): NodeJS.ProcessEnv => ({
   ...process.env,
@@ -12,16 +13,28 @@ const getPathEnv = (): NodeJS.ProcessEnv => ({
   ].join(':')
 })
 
-const runGateway = (args: string[]): Promise<string> =>
+const getNpmGlobalBin = (): Promise<string> =>
   new Promise((resolve, reject) => {
-    const isWindows = platform() === 'win32'
-    const cmd = isWindows ? 'wsl' : 'openclaw'
-    const fullArgs = isWindows
-      ? ['--', 'openclaw', 'gateway', ...args]
-      : ['gateway', ...args]
+    const child = spawn('npm', ['prefix', '-g'], { env: getPathEnv() })
+    let out = ''
+    child.stdout.on('data', (d) => (out += d.toString()))
+    child.on('close', (code) => (code === 0 ? resolve(join(out.trim(), 'bin')) : reject()))
+    child.on('error', reject)
+  })
 
+const runGateway = async (args: string[]): Promise<string> => {
+  const isWindows = platform() === 'win32'
+  const openclaw = isWindows
+    ? 'openclaw'
+    : join(await getNpmGlobalBin(), 'openclaw')
+  const cmd = isWindows ? 'wsl' : openclaw
+  const fullArgs = isWindows
+    ? ['--', 'openclaw', 'gateway', ...args]
+    : ['gateway', ...args]
+
+  return new Promise((resolve, reject) => {
     const child = spawn(cmd, fullArgs, {
-      shell: true,
+      shell: isWindows,
       env: getPathEnv()
     })
 
@@ -36,6 +49,7 @@ const runGateway = (args: string[]): Promise<string> =>
     })
     child.on('error', reject)
   })
+}
 
 export const startGateway = (): Promise<string> => runGateway(['start'])
 

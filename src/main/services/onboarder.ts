@@ -1,5 +1,6 @@
 import { spawn } from 'child_process'
 import { platform } from 'os'
+import { join } from 'path'
 import { BrowserWindow } from 'electron'
 
 interface OnboardConfig {
@@ -18,6 +19,15 @@ const getPathEnv = (): NodeJS.ProcessEnv => ({
   ].join(':')
 })
 
+const getNpmGlobalBin = (): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const child = spawn('npm', ['prefix', '-g'], { env: getPathEnv() })
+    let out = ''
+    child.stdout.on('data', (d) => (out += d.toString()))
+    child.on('close', (code) => (code === 0 ? resolve(join(out.trim(), 'bin')) : reject()))
+    child.on('error', reject)
+  })
+
 const runCmd = (
   cmd: string,
   args: string[],
@@ -29,7 +39,7 @@ const runCmd = (
     const fullArgs = isWindows ? ['--', cmd, ...args] : args
 
     const child = spawn(fullCmd, fullArgs, {
-      shell: true,
+      shell: isWindows,
       env: getPathEnv()
     })
 
@@ -56,6 +66,10 @@ export const runOnboard = async (
 
   log('OpenClaw 초기 설정 시작...')
 
+  const openclaw = platform() === 'win32'
+    ? 'openclaw'
+    : join(await getNpmGlobalBin(), 'openclaw')
+
   const onboardArgs = [
     'onboard',
     '--non-interactive',
@@ -70,12 +84,12 @@ export const runOnboard = async (
     '--skip-skills'
   ]
 
-  await runCmd('openclaw', onboardArgs, log)
+  await runCmd(openclaw, onboardArgs, log)
   log('기본 설정 완료!')
 
   if (config.telegramBotToken) {
     log('텔레그램 채널 추가 중...')
-    await runCmd('openclaw', [
+    await runCmd(openclaw, [
       'channels', 'add',
       '--channel', 'telegram',
       '--token', config.telegramBotToken
