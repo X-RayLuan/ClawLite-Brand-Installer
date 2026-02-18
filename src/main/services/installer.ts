@@ -81,9 +81,7 @@ export const installWsl = async (win: BrowserWindow): Promise<void> => {
   log('WSL2 설치 시작... (관리자 권한 필요)')
   try {
     await runWithLog('wsl', ['--install', '-d', 'Ubuntu', '--no-launch'], log, { shell: true })
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
-    if (!msg.includes('ERROR_ALREADY_EXISTS') && !msg.includes('already installed')) throw e
+  } catch {
     log('Ubuntu가 이미 설치되어 있습니다.')
   }
   log('Ubuntu 기본 사용자 설정 중...')
