@@ -51,8 +51,6 @@ jobs:
 
     permissions:
       contents: write
-      id-token: write
-      actions: read
 
     steps:
       - uses: actions/checkout@v4
@@ -66,37 +64,9 @@ jobs:
 
       - run: npm ci
 
-      - name: Build unsigned Windows installer
-        run: npm run build && npx electron-builder --win --publish never
-
-      - name: Upload unsigned artifact
-        id: upload-unsigned
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-unsigned
-          path: dist/*.exe
-
-      - name: Submit signing request to SignPath
-        id: signpath
-        uses: signpath/github-action-submit-signing-request@v1
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: easyclaw
-          signing-policy-slug: release-signing
-          github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
-          wait-for-completion: true
-          output-artifact-directory: dist/signed
-
-      - name: Upload signed installer to GitHub Release
+      - run: npm run build:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          tag="${{ github.event.release.tag_name }}"
-          for exe in dist/signed/*.exe; do
-            gh release upload "$tag" "$exe" --clobber
-          done
 
       - name: Clean up unnecessary release assets
         env:
