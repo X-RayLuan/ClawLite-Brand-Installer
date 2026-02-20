@@ -156,7 +156,7 @@ export default function DoneStep({ botUsername }: { botUsername?: string }): Rea
             className="text-[11px] text-text-muted/60 hover:text-text-muted transition-colors mb-1"
           >
             {showLogs ? '▼ 로그 숨기기' : '▶ 로그 보기'}
-            {logs.some((l) => l.includes('[error]')) && (
+            {logs.some((l) => l.includes('프로세스 종료') || l.includes('오류:')) && (
               <span className="ml-1.5 text-error">● 오류 감지</span>
             )}
           </button>
