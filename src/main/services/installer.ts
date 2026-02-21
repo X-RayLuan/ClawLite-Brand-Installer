@@ -1,6 +1,6 @@
 import { spawn } from 'child_process'
 import { StringDecoder } from 'string_decoder'
-import { createWriteStream, existsSync, mkdirSync } from 'fs'
+import { createWriteStream, existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs'
 import { tmpdir, platform, homedir } from 'os'
 import { join } from 'path'
 import https from 'https'
@@ -111,9 +111,7 @@ export const installNodeWin = async (win: BrowserWindow): Promise<void> => {
 
   log('WSL 상태 확인 중...')
   if (!(await ensureWslUsable())) {
-    throw new Error(
-      'WSL Ubuntu가 정상 동작하지 않습니다. WSL 설치 후 PC를 재부팅해 주세요.'
-    )
+    throw new Error('WSL Ubuntu가 정상 동작하지 않습니다. WSL 설치 후 PC를 재부팅해 주세요.')
   }
 
   log('WSL 내 Node.js 22 설치 중...')
@@ -207,10 +205,32 @@ const setUbuntuDefaultRoot = async (log: ProgressCallback): Promise<void> => {
   }
 }
 
-export const installWsl = async (
-  win: BrowserWindow
-): Promise<{ needsReboot: boolean }> => {
+// wsl --install 시도 후 Ubuntu 등록 여부까지 확인하는 헬퍼
+const tryWslInstall = async (args: string[], log: ProgressCallback): Promise<boolean> => {
+  try {
+    await runWithLog('wsl', args, log, { shell: true })
+    return true
+  } catch {
+    log(`wsl ${args.join(' ')} 실패`)
+    // 종료 코드가 0이 아니어도 Ubuntu가 등록되었을 수 있음 (재부팅 필요 시 exit 1)
+    if (await isUbuntuRegistered()) return true
+    return false
+  }
+}
+
+// 재부팅 루프 감지를 위한 플래그 파일 경로
+const WSL_REBOOT_FLAG = join(homedir(), '.easyclaw-wsl-reboot')
+
+export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boolean }> => {
   const log = (msg: string): void => sendProgress(win, msg)
+
+  // 재부팅 루프 감지: 이전에 WSL 설치를 위해 재부팅을 요청한 적이 있는지 확인
+  const previousRebootRequested = existsSync(WSL_REBOOT_FLAG)
+  try {
+    unlinkSync(WSL_REBOOT_FLAG)
+  } catch {
+    /* ignore */
+  }
 
   // Ubuntu가 이미 등록되어 있으면 wsl --install 건너뛰기 (재부팅 루프 방지)
   const alreadyRegistered = await isUbuntuRegistered()
@@ -221,40 +241,52 @@ export const installWsl = async (
     log('WSL2 설치 시작... (관리자 권한 필요)')
 
     // 1) wsl --install -d Ubuntu (--no-launch 없이 — 구버전 Windows 호환)
-    let installed = false
-    try {
-      await runWithLog('wsl', ['--install', '-d', 'Ubuntu'], log, { shell: true })
-      installed = true
-    } catch {
-      log('wsl --install -d Ubuntu 실패, 대체 방법 시도...')
-    }
+    let installed = await tryWslInstall(['--install', '-d', 'Ubuntu'], log)
 
     // 2) 폴백: wsl --install (기본 배포판 Ubuntu 자동 설치)
     if (!installed) {
-      try {
-        await runWithLog('wsl', ['--install'], log, { shell: true })
-        installed = true
-      } catch {
-        log('wsl --install 실패, Windows 기능 직접 활성화 시도...')
-      }
+      installed = await tryWslInstall(['--install'], log)
     }
 
-    // 3) 폴백: dism으로 WSL/VM 기능 직접 활성화 (구형 Windows 10)
+    // 3) 폴백: --web-download (Microsoft Store 대신 인터넷에서 직접 다운로드)
+    if (!installed) {
+      installed = await tryWslInstall(['--install', '-d', 'Ubuntu', '--web-download'], log)
+    }
+
+    // 4) 폴백: dism으로 WSL/VM 기능 직접 활성화 (구형 Windows 10)
     if (!installed) {
       try {
         await runWithLog(
           'dism.exe',
-          ['/online', '/enable-feature', '/featurename:Microsoft-Windows-Subsystem-Linux', '/all', '/norestart'],
+          [
+            '/online',
+            '/enable-feature',
+            '/featurename:Microsoft-Windows-Subsystem-Linux',
+            '/all',
+            '/norestart'
+          ],
           log,
           { shell: true }
         )
         await runWithLog(
           'dism.exe',
-          ['/online', '/enable-feature', '/featurename:VirtualMachinePlatform', '/all', '/norestart'],
+          [
+            '/online',
+            '/enable-feature',
+            '/featurename:VirtualMachinePlatform',
+            '/all',
+            '/norestart'
+          ],
           log,
           { shell: true }
         )
-        log('WSL 기능 활성화 완료. 재부팅 후 Ubuntu를 설치합니다.')
+        log('WSL 기능 활성화 완료.')
+
+        // 기능 활성화 직후 wsl --install 재시도 (같은 세션에서 작동할 수 있음)
+        installed = await tryWslInstall(['--install', '-d', 'Ubuntu'], log)
+        if (!installed) {
+          installed = await tryWslInstall(['--install', '-d', 'Ubuntu', '--web-download'], log)
+        }
       } catch {
         log('Windows 기능 활성화 실패')
       }
@@ -275,9 +307,30 @@ export const installWsl = async (
       log('WSL2 설치 완료!')
       return { needsReboot: false }
     }
+
+    // 이전 재부팅 후에도 Ubuntu 초기화 실패 → 재설치 안내
+    if (previousRebootRequested) {
+      throw new Error(
+        'Ubuntu 초기화에 실패했습니다. Windows Terminal에서 "wsl --unregister Ubuntu" 실행 후 앱을 다시 시도해 주세요.'
+      )
+    }
   }
 
-  // 그래도 안 되면 재부팅 필요
+  // 재부팅 루프 감지: 이전에 재부팅했는데도 Ubuntu가 설치되지 않은 경우
+  if (previousRebootRequested && !(await isUbuntuRegistered())) {
+    throw new Error(
+      'WSL 기능은 활성화되었지만 Ubuntu를 자동으로 설치할 수 없습니다. ' +
+        'Microsoft Store에서 "Ubuntu"를 검색하여 설치한 후 앱을 다시 실행해 주세요.'
+    )
+  }
+
+  // 재부팅 플래그 저장 후 재부팅 요청
+  try {
+    writeFileSync(WSL_REBOOT_FLAG, String(Date.now()))
+  } catch {
+    /* ignore */
+  }
+
   log('WSL2 기능 활성화를 위해 PC 재부팅이 필요합니다.')
   return { needsReboot: true }
 }
@@ -327,12 +380,10 @@ export const installOpenClaw = async (win: BrowserWindow): Promise<void> => {
   log('OpenClaw 설치 중...')
 
   if (platform() === 'win32') {
-    await runWithLog(
-      'wsl',
-      ['-u', 'root', '--', 'npm', 'install', '-g', 'openclaw@latest'],
-      log,
-      { shell: true, env: getPathEnv() }
-    )
+    await runWithLog('wsl', ['-u', 'root', '--', 'npm', 'install', '-g', 'openclaw@latest'], log, {
+      shell: true,
+      env: getPathEnv()
+    })
   } else {
     // macOS: Xcode Command Line Tools 필요 — 없으면 설치 팝업 띄움
     await ensureXcodeCli(log)
