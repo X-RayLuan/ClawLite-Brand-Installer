@@ -53,7 +53,11 @@ const buildMenu = (status: 'running' | 'stopped'): Menu =>
       label: 'Gateway 시작',
       enabled: status === 'stopped',
       click: async () => {
-        await startGateway()
+        try {
+          await startGateway()
+        } catch {
+          /* refreshStatus에서 상태 반영 */
+        }
         await refreshStatus()
       }
     },

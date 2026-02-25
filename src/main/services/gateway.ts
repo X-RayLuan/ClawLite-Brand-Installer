@@ -183,12 +183,31 @@ export const waitUntilStopped = async (timeoutMs = 5000): Promise<void> => {
 
 export const startGateway = async (): Promise<string> => {
   const isWin = platform() === 'win32'
-  const starter = isWin ? startGatewayWsl() : runGateway(['start'])
-  const result = await starter
-  if (result === 'started') {
-    await runDoctorFix()
+  if (isWin) {
+    const result = await startGatewayWsl()
+    if (result === 'started') {
+      await runDoctorFix()
+    }
+    return result
   }
-  return result
+
+  try {
+    const result = await runGateway(['start'])
+    await runDoctorFix()
+    return result
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    const isServiceMissing =
+      msg.includes('not loaded') || msg.includes('not installed') || msg.includes('bootstrap')
+    if (!isServiceMissing) throw err
+
+    // launchd 서비스 미설치 시 자동 설치 후 재시도
+    emitLog('[gateway] 서비스 미설치 감지, install 후 재시도')
+    await runGateway(['install'])
+    const result = await runGateway(['start'])
+    await runDoctorFix()
+    return result
+  }
 }
 
 export const stopGateway = (): Promise<string> => {
