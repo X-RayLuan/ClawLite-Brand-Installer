@@ -1,10 +1,11 @@
 import { spawn } from 'child_process'
-import { existsSync, createWriteStream, createReadStream } from 'fs'
+import { existsSync, createWriteStream, createReadStream, readFileSync, writeFileSync } from 'fs'
 import { homedir, platform } from 'os'
 import { join } from 'path'
+import https from 'https'
 import { BrowserWindow, dialog } from 'electron'
 import { stopGateway, startGateway, waitUntilStopped } from './gateway'
-import { runInWsl } from './wsl-utils'
+import { runInWsl, readWslFile } from './wsl-utils'
 
 const openclawDir = (): string => join(homedir(), '.openclaw')
 
@@ -45,8 +46,17 @@ const tarExtractMac = (srcFile: string): Promise<void> =>
 const tarCreateWsl = (destFile: string): Promise<void> =>
   new Promise((resolve, reject) => {
     const child = spawn('wsl', [
-      '-d', 'Ubuntu', '-u', 'root', '--',
-      'tar', '-czf', '-', '-C', '/root', '.openclaw'
+      '-d',
+      'Ubuntu',
+      '-u',
+      'root',
+      '--',
+      'tar',
+      '-czf',
+      '-',
+      '-C',
+      '/root',
+      '.openclaw'
     ])
     const ws = createWriteStream(destFile)
     child.stdout.pipe(ws)
@@ -63,9 +73,19 @@ const tarExtractWsl = (srcFile: string): Promise<void> =>
   new Promise((resolve, reject) => {
     const rs = createReadStream(srcFile)
     const child = spawn('wsl', [
-      '-d', 'Ubuntu', '-u', 'root', '--',
-      'tar', '-xzf', '-', '-C', '/root', '--no-same-owner',
-      '--exclude=../*', '--exclude=*/../*'
+      '-d',
+      'Ubuntu',
+      '-u',
+      'root',
+      '--',
+      'tar',
+      '-xzf',
+      '-',
+      '-C',
+      '/root',
+      '--no-same-owner',
+      '--exclude=../*',
+      '--exclude=*/../*'
     ])
     rs.pipe(child.stdin)
     child.stdout.resume()
@@ -77,6 +97,76 @@ const tarExtractWsl = (srcFile: string): Promise<void> =>
     child.on('error', reject)
     rs.on('error', reject)
   })
+
+// ─── IPv4 fix (macOS) ───
+
+const ensureIpv4Fix = async (): Promise<void> => {
+  if (platform() !== 'darwin') return
+  const fixPath = join(homedir(), '.openclaw', 'ipv4-fix.js')
+  if (!existsSync(fixPath)) return
+  // 현재 세션 launchd 환경에 NODE_OPTIONS 설정
+  await new Promise<void>((r) => {
+    const child = spawn('launchctl', ['setenv', 'NODE_OPTIONS', `--require=${fixPath}`])
+    child.on('close', () => r())
+    child.on('error', () => r())
+  })
+  // plist에 NODE_OPTIONS 영구 패치
+  const plist = join(homedir(), 'Library', 'LaunchAgents', 'ai.openclaw.gateway.plist')
+  if (!existsSync(plist)) return
+  let xml = readFileSync(plist, 'utf-8')
+  if (xml.includes('NODE_OPTIONS')) return
+  xml = xml.replace(
+    '</dict>\n  </dict>',
+    `<key>NODE_OPTIONS</key>\n    <string>--require=${fixPath}</string>\n    </dict>\n  </dict>`
+  )
+  writeFileSync(plist, xml)
+}
+
+// ─── Telegram long-poll 정리 ───
+
+const clearTelegramPoll = async (): Promise<void> => {
+  const isWin = platform() === 'win32'
+  let raw: string | undefined
+  try {
+    if (isWin) {
+      raw = await readWslFile('/root/.openclaw/openclaw.json')
+    } else {
+      const p = join(homedir(), '.openclaw', 'openclaw.json')
+      if (existsSync(p)) raw = readFileSync(p, 'utf-8')
+    }
+  } catch {
+    return
+  }
+  if (!raw) return
+
+  let token: string | undefined
+  try {
+    token = JSON.parse(raw).channels?.telegram?.botToken
+  } catch {
+    return
+  }
+  if (!token) return
+
+  for (let i = 0; i < 5; i++) {
+    const ok = await new Promise<boolean>((resolve) => {
+      https
+        .get(`https://api.telegram.org/bot${token}/getUpdates?timeout=0&limit=1`, (res) => {
+          let d = ''
+          res.on('data', (c) => (d += c))
+          res.on('end', () => {
+            try {
+              resolve(JSON.parse(d).ok === true)
+            } catch {
+              resolve(false)
+            }
+          })
+        })
+        .on('error', () => resolve(false))
+    })
+    if (ok) return
+    await new Promise((r) => setTimeout(r, 3000))
+  }
+}
 
 // ─── Export ───
 
@@ -146,11 +236,18 @@ export const importBackup = async (
       await tarExtractMac(backupFile)
     }
 
+    // IPv4 fix 적용 (launchctl setenv) + Telegram long-poll 409 충돌 방지
+    await ensureIpv4Fix()
+    await clearTelegramPoll()
+
     try {
       await startGateway()
     } catch {
       /* 사용자가 수동으로 시작 가능 */
     }
+
+    // Gateway install이 plist를 재생성했을 수 있으므로 다시 패치
+    await ensureIpv4Fix()
 
     return { success: true }
   } catch (e) {

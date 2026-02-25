@@ -6,6 +6,7 @@ import { join } from 'path'
 import https from 'https'
 import { BrowserWindow } from 'electron'
 import { runInWsl } from './wsl-utils'
+import { getPathEnv } from './path-utils'
 
 type ProgressCallback = (msg: string) => void
 
@@ -193,19 +194,7 @@ export const installNodeMac = async (win: BrowserWindow): Promise<void> => {
   log('Node.js 설치 완료!')
 }
 
-const getPathEnv = (): NodeJS.ProcessEnv => ({
-  ...process.env,
-  PATH: [
-    '/usr/local/bin',
-    '/opt/homebrew/bin',
-    process.env.NVM_BIN ?? '',
-    `${process.env.HOME}/.volta/bin`,
-    `${process.env.HOME}/.npm-global/bin`,
-    process.env.PATH ?? ''
-  ]
-    .filter(Boolean)
-    .join(':')
-})
+// getPathEnv는 path-utils.ts에서 import (NODE_OPTIONS 삭제 포함)
 
 const isXcodeCliInstalled = (): Promise<boolean> =>
   new Promise((resolve) => {

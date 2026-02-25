@@ -10,10 +10,15 @@ export const PATH_DIRS = [
   `${process.env.HOME}/.npm-global/bin`
 ].filter(Boolean)
 
-export const getPathEnv = (): NodeJS.ProcessEnv => ({
-  ...process.env,
-  PATH: [...PATH_DIRS, process.env.PATH ?? ''].join(':')
-})
+export const getPathEnv = (): NodeJS.ProcessEnv => {
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    PATH: [...PATH_DIRS, process.env.PATH ?? ''].join(':')
+  }
+  // 삭제된 ipv4-fix.js 참조로 인한 MODULE_NOT_FOUND 방지
+  delete env.NODE_OPTIONS
+  return env
+}
 
 export const findBin = (name: string): string => {
   if (platform() === 'win32') return name

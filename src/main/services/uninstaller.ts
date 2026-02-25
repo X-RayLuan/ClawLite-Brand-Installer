@@ -57,6 +57,12 @@ export const uninstallOpenClaw = async (
     if (isWin) {
       await runInWsl('rm -rf /root/.openclaw', 15000)
     } else {
+      // ipv4-fix.js 삭제 전 NODE_OPTIONS 정리 (안 하면 모든 Node 프로세스 MODULE_NOT_FOUND)
+      await new Promise<void>((r) => {
+        spawn('launchctl', ['unsetenv', 'NODE_OPTIONS'])
+          .on('close', () => r())
+          .on('error', () => r())
+      })
       await rm(join(homedir(), '.openclaw'), { recursive: true, force: true })
     }
   }
