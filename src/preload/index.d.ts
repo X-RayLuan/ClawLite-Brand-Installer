@@ -25,6 +25,7 @@ interface AgentMeta {
   icon: string
   featured: boolean
   comingSoon: boolean
+  purchaseUrl?: string
 }
 
 type AgentStatus = 'not_purchased' | 'purchased' | 'installed' | 'active'
@@ -89,6 +90,18 @@ interface ElectronAPI {
     onProgress: (cb: (percent: number) => void) => () => void
     onDownloaded: (cb: () => void) => () => void
     onError: (cb: (msg: string) => void) => () => void
+  }
+  config: {
+    read: () => Promise<{
+      success: boolean
+      config: { provider?: string; model?: string; hasTelegram?: boolean } | null
+      error?: string
+    }>
+    switchProvider: (config: {
+      provider: 'anthropic' | 'google' | 'openai' | 'deepseek' | 'glm'
+      apiKey: string
+      modelId?: string
+    }) => Promise<{ success: boolean; error?: string }>
   }
   agentStore: {
     list: () => Promise<AgentMeta[]>

@@ -11,9 +11,11 @@ interface AgentDetailProps {
     category: string
     price: number
     icon: string
+    purchaseUrl?: string
   }
   status: 'not_purchased' | 'purchased' | 'installed' | 'active'
   onBack: () => void
+  onStatusChange?: (newStatus: 'not_purchased' | 'purchased' | 'installed' | 'active') => void
 }
 
 const iconGradients: Record<string, string> = {
@@ -38,7 +40,8 @@ const statusLabels: Record<string, { text: string; cls: string }> = {
 export default function AgentDetailView({
   agent,
   status,
-  onBack
+  onBack,
+  onStatusChange
 }: AgentDetailProps): React.JSX.Element {
   const [licenseKey, setLicenseKey] = useState('')
   const [loading, setLoading] = useState(false)
@@ -53,7 +56,11 @@ export default function AgentDetailView({
     setError('')
     const result = await window.electronAPI.agentStore.activate(agent.id, licenseKey.trim())
     setLoading(false)
-    if (!result.success) setError(result.error || '활성화에 실패했습니다')
+    if (result.success) {
+      onStatusChange?.('active')
+    } else {
+      setError(result.error || '활성화에 실패했습니다')
+    }
   }
 
   const handleInstall = async (): Promise<void> => {
@@ -61,12 +68,16 @@ export default function AgentDetailView({
     setError('')
     const result = await window.electronAPI.agentStore.install(agent.id)
     setLoading(false)
-    if (!result.success) setError(result.error || '설치에 실패했습니다')
+    if (result.success) {
+      onStatusChange?.('installed')
+    } else {
+      setError(result.error || '설치에 실패했습니다')
+    }
   }
 
   const handlePurchase = (): void => {
-    // TODO: Lemon Squeezy 결제 페이지로 이동
-    window.open('https://easyclaw.lemonsqueezy.com', '_blank')
+    const url = agent.purchaseUrl || 'https://easyclaw.lemonsqueezy.com'
+    window.open(url, '_blank')
   }
 
   return (

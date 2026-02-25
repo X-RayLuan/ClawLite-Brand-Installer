@@ -41,6 +41,9 @@ export default function AgentStoreStep({ onBack }: { onBack: () => void }): Reac
         agent={selectedAgent}
         status={statuses[selectedAgent.id] || 'not_purchased'}
         onBack={() => setSelectedAgent(null)}
+        onStatusChange={(newStatus) => {
+          setStatuses((prev) => ({ ...prev, [selectedAgent.id]: newStatus }))
+        }}
       />
     )
   }

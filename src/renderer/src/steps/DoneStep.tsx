@@ -3,6 +3,7 @@ import LobsterLogo from '../components/LobsterLogo'
 import Button from '../components/Button'
 import LogViewer from '../components/LogViewer'
 import ManagementModal from '../components/ManagementModal'
+import ProviderSwitchModal from '../components/ProviderSwitchModal'
 import { useManagement } from '../hooks/useManagement'
 
 export default function DoneStep({
@@ -21,6 +22,9 @@ export default function DoneStep({
   const [logs, setLogs] = useState<string[]>([])
   const [showLogs, setShowLogs] = useState(false)
   const [autoLaunch, setAutoLaunch] = useState(false)
+  const [currentModel, setCurrentModel] = useState<string | null>(null)
+  const [currentProvider, setCurrentProvider] = useState<string | undefined>()
+  const [showProviderModal, setShowProviderModal] = useState(false)
 
   const { uninstall, backup } = useManagement(setStatus)
 
@@ -28,6 +32,20 @@ export default function DoneStep({
   useEffect(() => {
     window.electronAPI.autoLaunch.get().then((r) => setAutoLaunch(r.enabled))
   }, [])
+
+  // 현재 프로바이더/모델 읽기
+  const loadCurrentConfig = useCallback(() => {
+    window.electronAPI.config.read().then((r) => {
+      if (r.success && r.config) {
+        setCurrentModel(r.config.model || null)
+        setCurrentProvider(r.config.provider)
+      }
+    })
+  }, [])
+
+  useEffect(() => {
+    loadCurrentConfig()
+  }, [loadCurrentConfig])
 
   const toggleAutoLaunch = async (): Promise<void> => {
     const next = !autoLaunch
@@ -142,6 +160,18 @@ export default function DoneStep({
               : 'Gateway 중지됨'}
         </span>
       </div>
+
+      {/* 현재 AI 모델 */}
+      {currentModel && (
+        <button
+          onClick={() => setShowProviderModal(true)}
+          className="glass-card flex items-center gap-2 px-4 py-2 !rounded-full cursor-pointer hover:border-primary/40 transition-all duration-200"
+        >
+          <span className="text-[11px] text-text-muted">AI 모델:</span>
+          <span className="text-[11px] font-bold text-primary">{currentModel}</span>
+          <span className="text-[10px] text-text-muted/60">변경</span>
+        </button>
+      )}
 
       <div className="flex gap-3">
         {status === 'running' && (
@@ -381,6 +411,24 @@ export default function DoneStep({
           message={backup.backupMsg}
           errorMsg={backup.backupMsg}
           onClose={backup.closeBackup}
+        />
+      )}
+
+      {/* ─── 프로바이더 전환 모달 ─── */}
+      {showProviderModal && (
+        <ProviderSwitchModal
+          currentProvider={currentProvider}
+          currentModel={currentModel || undefined}
+          onClose={() => setShowProviderModal(false)}
+          onSuccess={() => {
+            loadCurrentConfig()
+            // Gateway 재시작은 IPC handler(config:switch-provider)에서 처리
+            setStatus('starting')
+            setTimeout(async () => {
+              const s = await window.electronAPI.gateway.status()
+              setStatus(s === 'running' ? 'running' : 'stopped')
+            }, 3000)
+          }}
         />
       )}
     </div>

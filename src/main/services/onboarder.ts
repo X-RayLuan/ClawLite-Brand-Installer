@@ -423,3 +423,257 @@ export const runOnboard = async (
 
   return { botUsername }
 }
+
+// ─── 프로바이더 전환 ───
+
+export interface CurrentConfig {
+  provider?: string
+  model?: string
+  hasTelegram?: boolean
+}
+
+export const readCurrentConfig = async (): Promise<CurrentConfig | null> => {
+  const isWindows = platform() === 'win32'
+  try {
+    let raw: string
+    if (isWindows) {
+      raw = await readWslFile('/root/.openclaw/openclaw.json')
+    } else {
+      const configPath = join(homedir(), '.openclaw', 'openclaw.json')
+      if (!existsSync(configPath)) return null
+      raw = readFileSync(configPath, 'utf-8')
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cfg = JSON.parse(raw) as any
+    const model = cfg?.agents?.defaults?.model?.primary as string | undefined
+    const hasTelegram = !!cfg?.channels?.telegram?.botToken
+    // 모델 ID에서 프로바이더 추출 (e.g. "anthropic/claude-sonnet-4-6" → "anthropic")
+    const provider = model?.split('/')[0]
+    return { provider, model, hasTelegram }
+  } catch {
+    return null
+  }
+}
+
+export const switchProvider = async (
+  win: BrowserWindow,
+  config: { provider: OnboardConfig['provider']; apiKey: string; modelId?: string }
+): Promise<void> => {
+  const log = (msg: string): void => {
+    win.webContents.send('install:progress', msg)
+  }
+
+  const isWindows = platform() === 'win32'
+  const isMac = platform() === 'darwin'
+  const npm = isWindows ? 'npm' : findBin('npm')
+  const runCmd = createRunCmd()
+
+  log('프로바이더 전환 시작...')
+
+  // 1. 기존 Telegram 토큰 보존
+  let savedTelegram: Record<string, unknown> | null = null
+  try {
+    let raw: string
+    if (isWindows) {
+      raw = await readWslFile('/root/.openclaw/openclaw.json')
+    } else {
+      raw = readFileSync(join(homedir(), '.openclaw', 'openclaw.json'), 'utf-8')
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cfg = JSON.parse(raw) as any
+    if (cfg?.channels?.telegram?.botToken) {
+      savedTelegram = cfg.channels.telegram
+    }
+  } catch {
+    /* no config yet */
+  }
+
+  // 2. Telegram 409 충돌 방지
+  if (savedTelegram && (savedTelegram as { botToken?: string }).botToken) {
+    log('Telegram 연결 정리 중...')
+    await waitTelegramClear((savedTelegram as { botToken: string }).botToken)
+  }
+
+  // 3. 기존 프로세스 정리
+  log('기존 Gateway 정리 중...')
+  if (isWindows) {
+    await wslKillOpenclaw().catch(() => {})
+  } else {
+    await new Promise<void>((resolve) => {
+      const child = spawn('pkill', ['-9', '-f', 'openclaw'])
+      child.on('close', () => resolve())
+      child.on('error', () => resolve())
+    })
+  }
+  await new Promise((resolve) => setTimeout(resolve, 3000))
+
+  // 4. 기존 설정/인증 파일 삭제
+  if (isWindows) {
+    try {
+      await runInWsl('rm -f /root/.openclaw/openclaw.json')
+    } catch {
+      /* ignore */
+    }
+    try {
+      await runInWsl(
+        'rm -f /root/.openclaw/agents/main/agent/auth.json /root/.openclaw/agents/main/agent/auth-profiles.json'
+      )
+    } catch {
+      /* ignore */
+    }
+  } else {
+    const ocDir = join(homedir(), '.openclaw')
+    for (const f of [
+      'openclaw.json',
+      join('agents', 'main', 'agent', 'auth.json'),
+      join('agents', 'main', 'agent', 'auth-profiles.json')
+    ]) {
+      const p = join(ocDir, f)
+      if (existsSync(p))
+        try {
+          unlinkSync(p)
+        } catch {
+          /* ignore */
+        }
+    }
+  }
+
+  // 5. openclaw onboard 재실행
+  log('새 프로바이더로 설정 중...')
+  const authFlags: Record<OnboardConfig['provider'], string[]> = {
+    anthropic: ['--auth-choice', 'apiKey', '--anthropic-api-key', config.apiKey],
+    google: ['--auth-choice', 'gemini-api-key', '--gemini-api-key', config.apiKey],
+    openai: ['--auth-choice', 'openai-api-key', '--openai-api-key', config.apiKey],
+    deepseek: [
+      '--auth-choice',
+      'custom-api-key',
+      '--custom-base-url',
+      'https://api.deepseek.com/v1',
+      '--custom-model-id',
+      'deepseek-chat',
+      '--custom-api-key',
+      config.apiKey,
+      '--custom-provider-id',
+      'deepseek',
+      '--custom-compatibility',
+      'openai'
+    ],
+    glm: ['--auth-choice', 'zai-api-key', '--zai-api-key', config.apiKey]
+  }
+
+  const openclawArgs = [
+    'onboard',
+    '--non-interactive',
+    '--accept-risk',
+    '--mode',
+    'local',
+    ...authFlags[config.provider],
+    '--gateway-port',
+    '18789',
+    '--gateway-bind',
+    'loopback',
+    ...(isWindows ? [] : ['--install-daemon', '--daemon-runtime', 'node']),
+    '--skip-skills'
+  ]
+
+  try {
+    if (isWindows) {
+      await runCmd('openclaw', openclawArgs, log)
+    } else {
+      await runCmd(npm, ['exec', '--', 'openclaw', ...openclawArgs], log)
+    }
+  } catch (e) {
+    if (isWindows) {
+      try {
+        await readWslFile('/root/.openclaw/openclaw.json')
+      } catch {
+        throw e
+      }
+    } else {
+      if (!existsSync(join(homedir(), '.openclaw', 'openclaw.json'))) throw e
+    }
+    log('설정 파일 생성 완료 (gateway 검증 건너뜀)')
+  }
+
+  // 6. 데몬 즉시 중지 (macOS)
+  if (isMac) {
+    const uid = process.getuid?.() ?? ''
+    await new Promise<void>((resolve) => {
+      const child = spawn('launchctl', ['bootout', `gui/${uid}/ai.openclaw.gateway`])
+      child.on('close', () => resolve())
+      child.on('error', () => resolve())
+    })
+    await new Promise<void>((resolve) => {
+      const child = spawn('pkill', ['-9', '-f', 'openclaw-gateway'])
+      child.on('close', () => resolve())
+      child.on('error', () => resolve())
+    })
+    await new Promise((resolve) => setTimeout(resolve, 3000))
+  }
+
+  // 7. 모델 패치
+  log('모델 설정 적용 중...')
+  const defaultModels: Record<OnboardConfig['provider'], string> = {
+    anthropic: 'anthropic/claude-sonnet-4-6',
+    google: 'google/gemini-3-flash',
+    openai: 'openai/gpt-5.2',
+    deepseek: 'deepseek/deepseek-chat',
+    glm: 'zai/glm-5'
+  }
+
+  const modelSpecs: Partial<
+    Record<OnboardConfig['provider'], { contextWindow: number; maxTokens: number }>
+  > = {
+    deepseek: { contextWindow: 128000, maxTokens: 8192 }
+  }
+
+  const patchSwitchConfig = (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ocConfig: any,
+    telegram: Record<string, unknown> | null
+  ): void => {
+    ocConfig.agents = ocConfig.agents ?? {}
+    ocConfig.agents.defaults = ocConfig.agents.defaults ?? {}
+    const selectedModel = config.modelId || defaultModels[config.provider]
+    ocConfig.agents.defaults.model = {
+      ...ocConfig.agents.defaults.model,
+      primary: selectedModel
+    }
+    const spec = modelSpecs[config.provider]
+    if (spec && ocConfig.models?.providers) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const provider of Object.values(ocConfig.models.providers) as any[]) {
+        if (Array.isArray(provider.models)) {
+          for (const m of provider.models) {
+            m.contextWindow = spec.contextWindow
+            m.maxTokens = spec.maxTokens
+          }
+        }
+      }
+    }
+    // Telegram 토큰 복원
+    if (telegram) {
+      ocConfig.channels = { ...ocConfig.channels, telegram }
+    }
+  }
+
+  if (isWindows) {
+    try {
+      const raw = await readWslFile('/root/.openclaw/openclaw.json')
+      const ocConfig = JSON.parse(raw)
+      patchSwitchConfig(ocConfig, savedTelegram)
+      await writeWslFile('/root/.openclaw/openclaw.json', JSON.stringify(ocConfig, null, 2))
+    } catch {
+      /* config not found */
+    }
+  } else {
+    const configPath = join(homedir(), '.openclaw', 'openclaw.json')
+    if (existsSync(configPath)) {
+      const ocConfig = JSON.parse(readFileSync(configPath, 'utf-8'))
+      patchSwitchConfig(ocConfig, savedTelegram)
+      writeFileSync(configPath, JSON.stringify(ocConfig, null, 2))
+    }
+  }
+
+  log('프로바이더 전환 완료!')
+}

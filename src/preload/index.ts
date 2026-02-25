@@ -115,6 +115,19 @@ const electronAPI = {
       return () => ipcRenderer.removeListener('update:error', handler)
     }
   },
+  config: {
+    read: (): Promise<{
+      success: boolean
+      config: { provider?: string; model?: string; hasTelegram?: boolean } | null
+      error?: string
+    }> => ipcRenderer.invoke('config:read'),
+    switchProvider: (config: {
+      provider: 'anthropic' | 'google' | 'openai' | 'deepseek' | 'glm'
+      apiKey: string
+      modelId?: string
+    }): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('config:switch-provider', config)
+  },
   agentStore: {
     list: (): Promise<
       {

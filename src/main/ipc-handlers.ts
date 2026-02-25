@@ -12,7 +12,7 @@ import {
   installNodeWsl,
   installOpenClawWsl
 } from './services/installer'
-import { runOnboard } from './services/onboarder'
+import { runOnboard, readCurrentConfig, switchProvider } from './services/onboarder'
 import {
   startGateway,
   stopGateway,
@@ -150,6 +150,42 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
       try {
         const result = await runOnboard(win(), config)
         return { success: true, botUsername: result.botUsername }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        try {
+          win().webContents.send('install:error', msg)
+        } catch {
+          /* window destroyed */
+        }
+        return { success: false, error: msg }
+      }
+    }
+  )
+
+  // Config 읽기/프로바이더 전환
+  ipcMain.handle('config:read', async () => {
+    try {
+      const config = await readCurrentConfig()
+      return { success: true, config }
+    } catch (e) {
+      return { success: false, config: null, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+
+  ipcMain.handle(
+    'config:switch-provider',
+    async (
+      _e,
+      config: {
+        provider: 'anthropic' | 'google' | 'openai' | 'deepseek' | 'glm'
+        apiKey: string
+        modelId?: string
+      }
+    ) => {
+      try {
+        await switchProvider(win(), config)
+        await restartGateway()
+        return { success: true }
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e)
         try {
