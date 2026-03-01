@@ -38,7 +38,7 @@
 ## 주요 기능
 
 - **원클릭 설치** — WSL, Node.js, OpenClaw 등 필요한 환경을 자동 감지 및 설치
-- **AI 제공사 선택** — Anthropic, Google Gemini, OpenAI 중 선택 가능
+- **AI 제공사 선택** — Anthropic, Google Gemini, OpenAI, MiniMax, GLM 지원
 - **텔레그램 연동** — 텔레그램 봇을 통해 어디서든 AI 에이전트 사용
 - **크로스 플랫폼** — macOS (Intel + Apple Silicon) / Windows 지원
 
