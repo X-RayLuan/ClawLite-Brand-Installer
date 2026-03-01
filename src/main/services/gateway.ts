@@ -130,10 +130,17 @@ const startGatewayWsl = async (): Promise<GatewayResult> => {
 
 const killWslGateway = (): Promise<void> =>
   new Promise((resolve) => {
-    const child = spawn(
-      'wsl',
-      ['-d', 'Ubuntu', '-u', 'root', '--', 'pkill', '-9', '-f', 'openclaw'],
-    )
+    const child = spawn('wsl', [
+      '-d',
+      'Ubuntu',
+      '-u',
+      'root',
+      '--',
+      'pkill',
+      '-9',
+      '-f',
+      'openclaw'
+    ])
     child.on('close', () => resolve())
     child.on('error', () => resolve())
   })

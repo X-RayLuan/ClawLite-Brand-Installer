@@ -22,7 +22,6 @@ import {
 } from './services/gateway'
 import { checkWslState } from './services/wsl-utils'
 import { checkForUpdates, downloadUpdate, installUpdate } from './services/updater'
-import { getAgentList, getAgentStatus, activateAgent, installAgent } from './services/agent-store'
 import { uninstallOpenClaw } from './services/uninstaller'
 import { exportBackup, importBackup } from './services/backup'
 
@@ -288,14 +287,6 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
   ipcMain.handle('autolaunch:get', () => ({
     enabled: app.getLoginItemSettings().openAtLogin
   }))
-
-  // Agent Store IPC
-  ipcMain.handle('agent-store:list', () => getAgentList())
-  ipcMain.handle('agent-store:status', (_e, agentId: string) => getAgentStatus(agentId))
-  ipcMain.handle('agent-store:activate', (_e, agentId: string, licenseKey: string) =>
-    activateAgent(agentId, licenseKey)
-  )
-  ipcMain.handle('agent-store:install', (_e, agentId: string) => installAgent(agentId))
 
   ipcMain.handle('autolaunch:set', (_e, enabled: boolean) => {
     app.setLoginItemSettings({

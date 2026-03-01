@@ -10,7 +10,6 @@ export type StepName =
   | 'config'
   | 'done'
   | 'troubleshoot'
-  | 'agentStore'
 
 const STEPS: StepName[] = [
   'welcome',
@@ -23,7 +22,15 @@ const STEPS: StepName[] = [
   'done'
 ]
 
-export const useWizard = () => {
+export const useWizard = (): {
+  currentStep: StepName
+  stepIndex: number
+  totalSteps: number
+  next: () => void
+  prev: () => void
+  canGoBack: boolean
+  goTo: (step: StepName) => void
+} => {
   const [currentStep, setCurrentStep] = useState<StepName>('welcome')
   const history = useRef<StepName[]>([])
   const stepIndex = STEPS.indexOf(currentStep)

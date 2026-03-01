@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import StepIndicator from './components/StepIndicator'
 import UpdateBanner from './components/UpdateBanner'
 import { useWizard } from './hooks/useWizard'
@@ -11,7 +11,6 @@ import TelegramGuideStep from './steps/TelegramGuideStep'
 import ConfigStep from './steps/ConfigStep'
 import DoneStep from './steps/DoneStep'
 import TroubleshootStep from './steps/TroubleshootStep'
-import AgentStoreStep from './steps/AgentStoreStep'
 
 type WslState =
   | 'not_available'
@@ -26,18 +25,16 @@ interface InstallNeeds {
   needOpenclaw: boolean
 }
 
+const BUBBLES = Array.from({ length: 8 }, (_, i) => ({
+  id: i,
+  size: 6 + Math.random() * 18,
+  left: Math.random() * 100,
+  delay: Math.random() * 10,
+  duration: 14 + Math.random() * 12
+}))
+
 const Bubbles = (): React.JSX.Element => {
-  const bubbles = useMemo(
-    () =>
-      Array.from({ length: 8 }, (_, i) => ({
-        id: i,
-        size: 6 + Math.random() * 18,
-        left: Math.random() * 100,
-        delay: Math.random() * 10,
-        duration: 14 + Math.random() * 12
-      })),
-    []
-  )
+  const bubbles = BUBBLES
 
   return (
     <>
@@ -132,11 +129,9 @@ function App(): React.JSX.Element {
       <Bubbles />
 
       <div className="flex flex-col h-full relative z-10">
-        {currentStep !== 'welcome' &&
-          currentStep !== 'troubleshoot' &&
-          currentStep !== 'agentStore' && (
-            <StepIndicator currentStep={currentStep} isWindows={isWindows} />
-          )}
+        {currentStep !== 'welcome' && currentStep !== 'troubleshoot' && (
+          <StepIndicator currentStep={currentStep} isWindows={isWindows} />
+        )}
 
         <div className="flex-1 flex flex-col min-h-0 pb-10 step-enter" key={currentStep}>
           {currentStep === 'welcome' && <WelcomeStep onNext={next} />}
@@ -169,14 +164,12 @@ function App(): React.JSX.Element {
             <DoneStep
               botUsername={botUsername}
               onTroubleshoot={() => goTo('troubleshoot')}
-              onAgentStore={() => goTo('agentStore')}
               onUninstallDone={() => {
                 window.electronAPI.wizard.clearState()
                 goTo('welcome')
               }}
             />
           )}
-          {currentStep === 'agentStore' && <AgentStoreStep onBack={prev} />}
           {currentStep === 'troubleshoot' && (
             <TroubleshootStep isWindows={isWindows} onBack={prev} />
           )}
@@ -200,7 +193,7 @@ function App(): React.JSX.Element {
 
         <UpdateBanner />
 
-        {canGoBack && currentStep !== 'troubleshoot' && currentStep !== 'agentStore' && (
+        {canGoBack && currentStep !== 'troubleshoot' && (
           <button
             onClick={prev}
             className="absolute bottom-14 left-6 z-20 flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-text-muted hover:text-text bg-white/5 hover:bg-white/10 rounded-xl border border-glass-border transition-all duration-200"

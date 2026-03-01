@@ -50,7 +50,6 @@ src/renderer/    → Renderer process (React UI)
 | `tray-manager.ts`   | 시스템 트레이 아이콘 + 10초 폴링으로 Gateway 상태 모니터링    |
 | `updater.ts`        | `electron-updater` 기반 자동 업데이트 (체크→다운로드→설치)    |
 | `troubleshooter.ts` | 포트 점유 확인, `openclaw doctor --fix` 실행 등 진단 도구     |
-| `agent-store.ts`    | 에이전트 라이선스 활성화(Lemon Squeezy) 및 설치 관리          |
 | `uninstaller.ts`    | OpenClaw 삭제 (npm uninstall -g + 설정 디렉토리 정리)         |
 | `backup.ts`         | OpenClaw 설정 백업/복원 (tar 기반, WSL 지원)                  |
 
@@ -76,7 +75,7 @@ IPC 채널 추가 시: `ipc-handlers.ts` 핸들러 → `preload/index.ts` electr
 
 `welcome` → `envCheck` → (`wslSetup`) → (`install`) → `apiKeyGuide` → `telegramGuide` → `config` → `done`
 
-- `troubleshoot`, `agentStore` 스텝은 STEPS 배열에 미포함, `DoneStep`에서 `goTo()`로 직접 진입
+- `troubleshoot` 스텝은 STEPS 배열에 미포함, `DoneStep`에서 `goTo()`로 직접 진입
 - `wslSetup` 스텝은 Windows + WSL 미준비 시에만 진입
 - `install` 스텝은 환경 체크 결과에 따라 조건부 진입
 - `goTo()`로 스텝 건너뛰기 가능, `history` ref로 뒤로가기 지원

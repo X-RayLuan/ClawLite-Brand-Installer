@@ -11,12 +11,10 @@ const UPDATE_CHECK_INTERVAL = 30 * 60 * 1000 // 30분
 export default function DoneStep({
   botUsername,
   onTroubleshoot,
-  onAgentStore,
   onUninstallDone
 }: {
   botUsername?: string
   onTroubleshoot?: () => void
-  onAgentStore?: () => void
   onUninstallDone?: () => void
 }): React.JSX.Element {
   const [status, setStatus] = useState<'starting' | 'running' | 'stopped'>('starting')
@@ -231,8 +229,7 @@ export default function DoneStep({
                 status !== 'stopped'
                   ? {
                       animation: 'glow-pulse 2s infinite',
-                      color:
-                        status === 'running' ? 'var(--color-success)' : 'var(--color-warning)'
+                      color: status === 'running' ? 'var(--color-success)' : 'var(--color-warning)'
                     }
                   : {}
               }
@@ -381,15 +378,6 @@ export default function DoneStep({
             />
           </div>
         </button>
-        {onAgentStore && (
-          <button
-            onClick={onAgentStore}
-            className="glass-card flex items-center gap-2 px-3 py-2 cursor-pointer hover:border-primary/40 transition-all duration-200"
-          >
-            <span className="text-sm">🛒</span>
-            <span className="text-[11px] font-bold flex-1 text-left">에이전트 스토어</span>
-          </button>
-        )}
         {onTroubleshoot && (
           <button
             onClick={onTroubleshoot}

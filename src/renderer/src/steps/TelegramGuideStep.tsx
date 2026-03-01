@@ -31,7 +31,9 @@ export default function TelegramGuideStep({ onNext }: { onNext: () => void }): R
       <div className="flex-1">
         <div className="text-center space-y-0.5 pt-2 pb-1">
           <h2 className="text-lg font-extrabold">텔레그램 봇 만들기</h2>
-          <p className="text-text-muted text-xs">AI 에이전트와 대화할 텔레그램 봇을 만들어 봅시다</p>
+          <p className="text-text-muted text-xs">
+            AI 에이전트와 대화할 텔레그램 봇을 만들어 봅시다
+          </p>
         </div>
 
         <a

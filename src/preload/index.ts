@@ -129,31 +129,6 @@ const electronAPI = {
     }): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('config:switch-provider', config)
   },
-  agentStore: {
-    list: (): Promise<
-      {
-        id: string
-        name: string
-        tagline: string
-        description: string
-        features: string[]
-        category: string
-        price: number
-        icon: string
-        featured: boolean
-        comingSoon: boolean
-      }[]
-    > => ipcRenderer.invoke('agent-store:list'),
-    status: (agentId: string): Promise<'not_purchased' | 'purchased' | 'installed' | 'active'> =>
-      ipcRenderer.invoke('agent-store:status', agentId),
-    activate: (
-      agentId: string,
-      licenseKey: string
-    ): Promise<{ success: boolean; error?: string }> =>
-      ipcRenderer.invoke('agent-store:activate', agentId, licenseKey),
-    install: (agentId: string): Promise<{ success: boolean; error?: string }> =>
-      ipcRenderer.invoke('agent-store:install', agentId)
-  },
   openclaw: {
     checkUpdate: (): Promise<{ currentVersion: string | null; latestVersion: string | null }> =>
       ipcRenderer.invoke('openclaw:check-update')
@@ -164,9 +139,7 @@ const electronAPI = {
       ipcRenderer.invoke('autolaunch:set', enabled)
   },
   uninstall: {
-    openclaw: (
-      opts: { removeConfig: boolean }
-    ): Promise<{ success: boolean; error?: string }> =>
+    openclaw: (opts: { removeConfig: boolean }): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('uninstall:openclaw', opts),
     onProgress: (cb: (msg: string) => void): (() => void) => {
       const handler = (_: unknown, msg: string): void => cb(msg)
@@ -177,8 +150,7 @@ const electronAPI = {
   backup: {
     export: (): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('backup:export'),
-    import: (): Promise<{ success: boolean; error?: string }> =>
-      ipcRenderer.invoke('backup:import')
+    import: (): Promise<{ success: boolean; error?: string }> => ipcRenderer.invoke('backup:import')
   }
 }
 

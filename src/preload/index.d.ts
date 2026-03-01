@@ -12,24 +12,6 @@ interface WizardPersistedState {
   timestamp: number
 }
 
-type AgentCategory = 'marketing' | 'productivity' | 'data' | 'custom'
-
-interface AgentMeta {
-  id: string
-  name: string
-  tagline: string
-  description: string
-  features: string[]
-  category: AgentCategory
-  price: number
-  icon: string
-  featured: boolean
-  comingSoon: boolean
-  purchaseUrl?: string
-}
-
-type AgentStatus = 'not_purchased' | 'purchased' | 'installed' | 'active'
-
 interface ElectronAPI {
   version: () => Promise<string>
   env: {
@@ -103,12 +85,6 @@ interface ElectronAPI {
       apiKey: string
       modelId?: string
     }) => Promise<{ success: boolean; error?: string }>
-  }
-  agentStore: {
-    list: () => Promise<AgentMeta[]>
-    status: (agentId: string) => Promise<AgentStatus>
-    activate: (agentId: string, licenseKey: string) => Promise<{ success: boolean; error?: string }>
-    install: (agentId: string) => Promise<{ success: boolean; error?: string }>
   }
   openclaw: {
     checkUpdate: () => Promise<{ currentVersion: string | null; latestVersion: string | null }>

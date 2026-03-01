@@ -54,9 +54,7 @@ export default function ApiKeyGuideStep({
     <div className="flex-1 flex flex-col min-h-0 px-8">
       <div className="shrink-0 text-center space-y-0.5 pt-2 pb-1.5">
         <h2 className="text-lg font-extrabold">AI 제공사 선택</h2>
-        <p className="text-text-muted text-xs">
-          사용할 AI 제공사를 선택하고 API 키를 발급받으세요
-        </p>
+        <p className="text-text-muted text-xs">사용할 AI 제공사를 선택하고 API 키를 발급받으세요</p>
       </div>
 
       <div className="shrink-0 flex rounded-xl border border-glass-border overflow-hidden bg-bg-card">

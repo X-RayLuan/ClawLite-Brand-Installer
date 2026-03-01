@@ -1135,7 +1135,9 @@
             <strong>OpenClaw AI 에이전트</strong>를 원클릭으로 설치하고 바로 대화하세요.
           </p>
 
-          <span class="waitlist-badge hero-anim hero-anim-d4" id="version-badge">최신 버전 확인 중...</span>
+          <span class="waitlist-badge hero-anim hero-anim-d4" id="version-badge"
+            >최신 버전 확인 중...</span
+          >
           <div class="btn-group hero-anim hero-anim-d5">
             <a
               href="https://github.com/ybgwon96/easyclaw-releases/releases/latest/download/easy-claw.dmg"
@@ -1497,7 +1499,9 @@
     <script defer src="https://va.vercel-scripts.com/v1/script.js"></script>
     <script>
       fetch('https://api.github.com/repos/ybgwon96/easyclaw-releases/releases/latest')
-        .then(function (r) { return r.json() })
+        .then(function (r) {
+          return r.json()
+        })
         .then(function (d) {
           if (d.tag_name) {
             document.getElementById('version-badge').textContent = d.tag_name + ' 출시'

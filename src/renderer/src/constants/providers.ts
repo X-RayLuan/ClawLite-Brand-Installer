@@ -124,7 +124,7 @@ export const providerConfigs: ProviderConfig[] = [
     models: [
       { id: 'zai/glm-5', name: 'GLM-5', desc: '최신 최고 성능 (추천)', price: '$1/$3.2' },
       { id: 'zai/glm-4.7', name: 'GLM-4.7', desc: '고성능', price: '$0.6/$2.2' },
-{ id: 'zai/glm-4.7-flashx', name: 'GLM-4.7 FlashX', desc: '빠른', price: '$0.07/$0.4' },
+      { id: 'zai/glm-4.7-flashx', name: 'GLM-4.7 FlashX', desc: '빠른', price: '$0.07/$0.4' },
       { id: 'zai/glm-4.7-flash', name: 'GLM-4.7 Flash', desc: '무료', price: 'Free' }
     ]
   }

@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 
-export const useInstallLogs = () => {
+export const useInstallLogs = (): {
+  logs: string[]
+  error: string | null
+  clearLogs: () => void
+} => {
   const [logs, setLogs] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
 
