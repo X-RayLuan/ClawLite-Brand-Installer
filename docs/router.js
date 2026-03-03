@@ -181,7 +181,7 @@
     if (_dom.crossTitle) _dom.crossTitle.textContent = getT(bannerKey + '.title')
     if (_dom.crossDesc) _dom.crossDesc.textContent = getT(bannerKey + '.desc')
     if (_dom.crossBtn) {
-      _dom.crossBtn.textContent = getT(bannerKey + '.btn')
+      _dom.crossBtnText.textContent = getT(bannerKey + '.btn')
       _dom.crossBtn.setAttribute('data-product', other)
     }
 
@@ -313,6 +313,7 @@
     _dom.crossTitle = document.getElementById('cross-banner-title')
     _dom.crossDesc = document.getElementById('cross-banner-desc')
     _dom.crossBtn = document.getElementById('cross-banner-btn')
+    _dom.crossBtnText = document.getElementById('cross-banner-btn-text')
     _dom.crossCard = document.querySelector('.cross-banner-card')
   }
 
