@@ -71,7 +71,7 @@ export default function ApiKeyGuideStep({
         ))}
       </div>
 
-      {/* 모델 선택 */}
+      {/* Model selection */}
       <div className="flex-1 flex flex-col min-h-0 mt-3">
         <label className="shrink-0 text-xs font-bold text-text-muted mb-1.5">
           {t('apiKeyGuide.modelSelect')}

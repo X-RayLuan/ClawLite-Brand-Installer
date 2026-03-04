@@ -15,6 +15,7 @@
 **下载 → 运行 → 输入 API 密钥**，整个过程就是这么简单。
 
 EasyClaw 自动完成以下工作：
+
 - 检测运行环境（Node.js 版本、Windows 上的 WSL 状态等）
 - 安装缺少的依赖
 - 配置 AI 提供商（支持 Anthropic、Google Gemini、OpenAI、MiniMax、GLM）
@@ -36,6 +37,7 @@ macOS 上安装比较简单，但 Windows 上 OpenClaw 需要在 WSL（Windows S
 ### 条件分支的 7 步向导
 
 安装向导有 7 个步骤，但并非所有步骤都会展示给每个用户：
+
 - WSL 设置步骤仅在 Windows 上 WSL 未就绪时显示
 - 如果环境已经就绪，跳过安装步骤
 - 故障排除步骤从完成页面进入，不在常规流程中
@@ -48,14 +50,14 @@ macOS 上安装比较简单，但 Windows 上 OpenClaw 需要在 WSL（Windows S
 
 ## 技术栈
 
-| 领域 | 技术 |
-|------|------|
-| 桌面框架 | Electron + electron-vite |
-| UI | React 19 + Tailwind CSS 4 |
-| 语言 | TypeScript |
-| CI/CD | electron-builder + GitHub Actions |
-| 代码签名 | Apple Notarization (macOS) |
-| 国际化 | 中文、英文、韩文、日文 |
+| 领域     | 技术                              |
+| -------- | --------------------------------- |
+| 桌面框架 | Electron + electron-vite          |
+| UI       | React 19 + Tailwind CSS 4         |
+| 语言     | TypeScript                        |
+| CI/CD    | electron-builder + GitHub Actions |
+| 代码签名 | Apple Notarization (macOS)        |
+| 国际化   | 中文、英文、韩文、日文            |
 
 ## 下载
 

@@ -134,6 +134,8 @@ Windows에서는 WSL(Windows Subsystem for Linux) Ubuntu 내에서 Node.js/OpenC
 - Prettier: 싱글쿼트, 세미콜론 없음, 100자 폭, trailing comma 없음
 - ESLint: `@electron-toolkit/eslint-config-ts` + `eslint-config-prettier` + React hooks/refresh 규칙
 - 들여쓰기: 스페이스 2칸, LF 줄바꿈
+- **코드 주석**: 영어로 작성 (국제 기여자를 위해)
+- **커밋 메시지**: 영어 Conventional Commits (e.g. `feat:`, `fix:`, `refactor:`)
 
 ## UI 테마
 

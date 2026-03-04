@@ -40,7 +40,7 @@ export const setupAutoUpdater = (getWin: () => BrowserWindow | null): void => {
 export const checkForUpdates = (): void => {
   if (is.dev) return
   autoUpdater.checkForUpdates().catch(() => {
-    // 네트워크 오류 등 무시
+    // Ignore network errors
   })
 }
 

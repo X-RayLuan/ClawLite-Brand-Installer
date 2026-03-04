@@ -13,6 +13,7 @@ I kept seeing people in the community give up halfway through the setup. So I bu
 **Download → Run → Enter your API key.** That's the whole process.
 
 EasyClaw automatically:
+
 - Detects your environment (Node.js version, WSL on Windows, etc.)
 - Installs missing dependencies
 - Configures OpenClaw with your AI provider (Anthropic, Google Gemini, OpenAI, MiniMax, or GLM)
@@ -40,6 +41,7 @@ Auto-start on login was another challenge: the app needs to start hidden (no win
 ### 7-step wizard with conditional flow
 
 The installation wizard has 7 steps, but not all are shown to every user:
+
 - WSL setup only appears on Windows when WSL isn't ready
 - The install step is skipped if everything is already installed
 - A troubleshooting step is accessible from the final screen but not in the normal flow

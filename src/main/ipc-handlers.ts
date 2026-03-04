@@ -73,7 +73,7 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
   ipcMain.handle('env:check', () => checkEnvironment())
   ipcMain.handle('openclaw:check-update', () => checkOpenclawUpdate())
 
-  // WSL 관련 IPC
+  // WSL-related IPC
   ipcMain.handle('wsl:check', () => checkWslState())
 
   ipcMain.handle('wsl:install', async () => {
@@ -91,7 +91,7 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
     }
   })
 
-  // Wizard 상태 영속화 IPC
+  // Wizard state persistence IPC
   ipcMain.handle('wizard:save-state', (_e, state: WizardPersistedState) => {
     try {
       writeFileSync(getWizardStatePath(), JSON.stringify(state))
@@ -106,7 +106,7 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
       const path = getWizardStatePath()
       if (!existsSync(path)) return null
       const state: WizardPersistedState = JSON.parse(readFileSync(path, 'utf-8'))
-      // 24시간 경과 시 만료
+      // Expire after 24 hours
       if (Date.now() - state.timestamp > 24 * 60 * 60 * 1000) {
         unlinkSync(path)
         return null
@@ -191,7 +191,7 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
     }
   )
 
-  // Config 읽기/프로바이더 전환
+  // Read config / switch provider
   ipcMain.handle('config:read', async () => {
     try {
       const config = await readCurrentConfig()
@@ -227,7 +227,7 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
     }
   )
 
-  // Gateway 로그를 renderer에 전달
+  // Forward Gateway logs to renderer
   setGatewayLogCallback((msg) => {
     try {
       win().webContents.send('gateway:log', msg)
@@ -295,7 +295,7 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
     child.unref()
   })
 
-  // 자동 업데이트 IPC
+  // Auto update IPC
   ipcMain.handle('update:check', () => {
     checkForUpdates()
     return { success: true }
@@ -311,7 +311,7 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
     return { success: true }
   })
 
-  // 자동 시작 IPC
+  // Auto launch IPC
   ipcMain.handle('autolaunch:get', () => ({
     enabled: app.getLoginItemSettings().openAtLogin
   }))
@@ -324,7 +324,7 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
     return { success: true }
   })
 
-  // OpenClaw 삭제
+  // Uninstall OpenClaw
   ipcMain.handle('uninstall:openclaw', async (_e, opts: { removeConfig: boolean }) => {
     try {
       await uninstallOpenClaw(win(), opts)
@@ -334,11 +334,11 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
     }
   })
 
-  // 백업 / 복원
+  // Backup / restore
   ipcMain.handle('backup:export', () => exportBackup(win()))
   ipcMain.handle('backup:import', () => importBackup(win()))
 
-  // 다국어 설정
+  // i18n settings
   ipcMain.handle('i18n:get-locale', () => i18nMain.language || getSavedLocale())
 
   const SUPPORTED_LANGS = ['ko', 'en', 'ja', 'zh']

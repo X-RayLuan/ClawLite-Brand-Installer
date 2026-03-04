@@ -72,16 +72,16 @@ function App(): React.JSX.Element {
   const [wslState, setWslState] = useState<WslState>('ready')
   const [version, setVersion] = useState('')
 
-  // 앱 시작 시 버전 + OS 확인 + 리부트 복원
+  // Load version + OS check + reboot restoration on app start
   useEffect(() => {
     window.electronAPI.version().then(setVersion)
 
-    // env.check() 완료 후 loadState() 실행 (레이스 컨디션 방지)
+    // Run loadState() after env.check() completes (prevent race condition)
     window.electronAPI.env.check().then(async (env) => {
       setIsWindows(env.os === 'windows')
       if (env.wslState) setWslState(env.wslState)
 
-      // 리부트 후 상태 복원 — wslState가 정확히 설정된 후 실행
+      // Restore state after reboot — run after wslState is correctly set
       const state = await window.electronAPI.wizard.loadState()
       if (state) {
         goTo(state.step as 'wslSetup' | 'envCheck')
@@ -100,7 +100,7 @@ function App(): React.JSX.Element {
       needOpenclaw: !env.openclawInstalled
     })
 
-    // Windows + WSL 미준비 → wslSetup으로 이동
+    // Windows + WSL not ready → navigate to wslSetup
     if (env.os === 'windows' && env.wslState && env.wslState !== 'ready') {
       setWslState(env.wslState)
       goTo('wslSetup')
@@ -111,7 +111,7 @@ function App(): React.JSX.Element {
   }
 
   const handleWslReady = useCallback((): void => {
-    // WSL 준비 완료 → 상태 파일 삭제 후 envCheck 재실행
+    // WSL ready → clear state file and re-run envCheck
     window.electronAPI.wizard.clearState()
     goTo('envCheck')
   }, [goTo])

@@ -15,6 +15,7 @@
 **ダウンロード → 実行 → APIキーを入力** — この3ステップだけでOpenClawの環境構築が完了します。
 
 EasyClawが自動で行うこと：
+
 - 環境の自動検出（Node.jsバージョン、WindowsのWSL状態など）
 - 必要な依存関係のインストール
 - AIプロバイダーの設定（Anthropic、Google Gemini、OpenAI、MiniMax、GLM対応）
@@ -36,6 +37,7 @@ ElectronアプリからWSLのインストールを自動化するのは予想以
 ### 条件分岐付き7ステップウィザード
 
 インストールウィザードは7ステップありますが、すべてのユーザーにすべてが表示されるわけではありません：
+
 - WSLセットアップはWindowsでWSLが未準備の場合のみ表示
 - すでにインストール済みならインストールステップはスキップ
 - トラブルシューティングは完了画面からのみアクセス可能
@@ -44,14 +46,14 @@ ElectronアプリからWSLのインストールを自動化するのは予想以
 
 ## 技術スタック
 
-| 領域 | 技術 |
-|------|------|
-| デスクトップ | Electron + electron-vite |
-| UI | React 19 + Tailwind CSS 4 |
-| 言語 | TypeScript |
-| CI/CD | electron-builder + GitHub Actions |
-| コード署名 | Apple Notarization (macOS) |
-| 多言語 | 日本語・英語・韓国語・中国語対応 |
+| 領域         | 技術                              |
+| ------------ | --------------------------------- |
+| デスクトップ | Electron + electron-vite          |
+| UI           | React 19 + Tailwind CSS 4         |
+| 言語         | TypeScript                        |
+| CI/CD        | electron-builder + GitHub Actions |
+| コード署名   | Apple Notarization (macOS)        |
+| 多言語       | 日本語・英語・韓国語・中国語対応  |
 
 ## ダウンロード
 

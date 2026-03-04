@@ -15,7 +15,7 @@ export const getPathEnv = (): NodeJS.ProcessEnv => {
     ...process.env,
     PATH: [...PATH_DIRS, process.env.PATH ?? ''].join(':')
   }
-  // 삭제된 ipv4-fix.js 참조로 인한 MODULE_NOT_FOUND 방지
+  // Prevent MODULE_NOT_FOUND from referencing deleted ipv4-fix.js
   delete env.NODE_OPTIONS
   return env
 }

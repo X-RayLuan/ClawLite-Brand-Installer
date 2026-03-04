@@ -64,8 +64,7 @@ const translations = {
     'easycode.features.envcheck.desc':
       'Git, Node.js 등 필요한 도구를 자동 감지하여 누락된 것만 설치합니다.',
     'easycode.features.i18n.title': '다국어 지원',
-    'easycode.features.i18n.desc':
-      '한국어, 영어, 일본어, 중국어 4개 언어로 편리하게 사용하세요.',
+    'easycode.features.i18n.desc': '한국어, 영어, 일본어, 중국어 4개 언어로 편리하게 사용하세요.',
     'easycode.steps.title': '3단계면 끝',
     'easycode.steps.sub': '설치 파일을 받고, 실행하고, 코딩하세요.',
     'easycode.steps.download.title': '다운로드',
@@ -155,7 +154,8 @@ const translations = {
     'easycode.steps.download.title': 'Download',
     'easycode.steps.download.desc': 'Download the installer<br />for your OS',
     'easycode.steps.install.title': 'Install & Configure',
-    'easycode.steps.install.desc': 'EasyCode detects your environment<br />and auto-installs what you need',
+    'easycode.steps.install.desc':
+      'EasyCode detects your environment<br />and auto-installs what you need',
     'easycode.steps.start.title': 'Start Coding',
     'easycode.steps.start.desc': 'Type claude in the terminal<br />and start vibe coding',
     'easycode.cta.title': 'Get Started Now',
@@ -233,8 +233,7 @@ const translations = {
     'easycode.features.envcheck.desc':
       'Git、Node.jsなど必要なツールを自動検出し、不足分だけインストールします。',
     'easycode.features.i18n.title': '多言語対応',
-    'easycode.features.i18n.desc':
-      '韓国語、英語、日本語、中国語の4言語で快適にご利用ください。',
+    'easycode.features.i18n.desc': '韓国語、英語、日本語、中国語の4言語で快適にご利用ください。',
     'easycode.steps.title': '3ステップで完了',
     'easycode.steps.sub': 'インストーラーをダウンロードして、実行して、コーディング開始。',
     'easycode.steps.download.title': 'ダウンロード',
@@ -308,11 +307,9 @@ const translations = {
     'easycode.features.title': '为什么选择EasyCode？',
     'easycode.features.sub': 'Claude Code安装的每一步都变得简单。',
     'easycode.features.oneclick.title': '一键安装',
-    'easycode.features.oneclick.desc':
-      '自动检测并一次性安装Claude Code及所有必需环境。',
+    'easycode.features.oneclick.desc': '自动检测并一次性安装Claude Code及所有必需环境。',
     'easycode.features.envcheck.title': '环境自动检测',
-    'easycode.features.envcheck.desc':
-      '自动检测Git、Node.js等必需工具，仅安装缺失的部分。',
+    'easycode.features.envcheck.desc': '自动检测Git、Node.js等必需工具，仅安装缺失的部分。',
     'easycode.features.i18n.title': '多语言支持',
     'easycode.features.i18n.desc': '支持韩语、英语、日语、中文4种语言，使用更方便。',
     'easycode.steps.title': '3步即可完成',

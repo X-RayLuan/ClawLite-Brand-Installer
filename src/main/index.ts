@@ -37,7 +37,7 @@ function createWindow(): void {
     if (!startHidden) mainWindow?.show()
   })
 
-  // 창 닫기 → 트레이 유지 (실제 종료 아님)
+  // Close window → stay in tray (not a real quit)
   mainWindow.on('close', (e) => {
     if (!isQuitting) {
       e.preventDefault()
@@ -68,7 +68,7 @@ function createWindow(): void {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
-  // 숨김 시작 시 Gateway 자동 시작
+  // Auto-start Gateway when launched hidden
   if (startHidden) {
     startGateway().catch(() => {})
   }
@@ -88,7 +88,7 @@ app.whenReady().then(async () => {
 
   createWindow()
 
-  // 시스템 트레이
+  // System tray
   createTray({
     getWin,
     onQuit: async () => {
@@ -98,7 +98,7 @@ app.whenReady().then(async () => {
   })
   startPolling()
 
-  // 자동 업데이트
+  // Auto update
   setupAutoUpdater(getWin)
   setTimeout(checkForUpdates, 5000)
 
@@ -112,9 +112,9 @@ app.whenReady().then(async () => {
   })
 })
 
-// 트레이 상주 — 모든 창 닫혀도 앱 유지
+// Stay in tray — keep app alive even when all windows are closed
 app.on('window-all-closed', () => {
-  // 트레이 모드에서는 quit하지 않음
+  // Do not quit in tray mode
 })
 
 app.on('quit', () => {

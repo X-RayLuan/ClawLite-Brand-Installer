@@ -26,7 +26,7 @@ export default function WslSetupStep({ wslState, onReady }: WslSetupStepProps): 
     setCurrentState(wslState)
   }, [wslState])
 
-  // ready면 자동으로 다음 스텝
+  // Auto-advance to next step when ready
   useEffect(() => {
     if (currentState !== 'ready') return
     const timer = setTimeout(onReady, 500)
@@ -40,7 +40,7 @@ export default function WslSetupStep({ wslState, onReady }: WslSetupStepProps): 
       const result = await window.electronAPI.wsl.install()
       if (result.success && result.needsReboot) {
         setCurrentState('needs_reboot')
-        // 리부트 전 상태 저장
+        // Save state before reboot
         await window.electronAPI.wizard.saveState({
           step: 'wslSetup',
           wslInstalled: true,
@@ -69,7 +69,7 @@ export default function WslSetupStep({ wslState, onReady }: WslSetupStepProps): 
           timestamp: Date.now()
         })
       } else if (result.success) {
-        // 리부트 불필요 → 상태 재확인
+        // No reboot needed → re-check state
         const state = await window.electronAPI.wsl.check()
         setCurrentState(state)
       } else {

@@ -9,7 +9,7 @@ import ProviderSwitchModal from '../components/ProviderSwitchModal'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { useManagement } from '../hooks/useManagement'
 
-const UPDATE_CHECK_INTERVAL = 30 * 60 * 1000 // 30분
+const UPDATE_CHECK_INTERVAL = 30 * 60 * 1000 // 30 min
 
 export default function DoneStep({
   botUsername,
@@ -30,7 +30,7 @@ export default function DoneStep({
   const [currentProvider, setCurrentProvider] = useState<string | undefined>()
   const [showProviderModal, setShowProviderModal] = useState(false)
 
-  // OpenClaw 업데이트 상태
+  // OpenClaw update state
   const [openclawUpdate, setOpenclawUpdate] = useState<{
     current: string
     latest: string
@@ -44,7 +44,7 @@ export default function DoneStep({
 
   const { uninstall, backup } = useManagement(setStatus)
 
-  // OpenClaw 업데이트 체크
+  // Check for OpenClaw updates
   const checkOpenclawUpdate = useCallback(async () => {
     try {
       const info = await window.electronAPI.openclaw.checkUpdate()
@@ -54,11 +54,11 @@ export default function DoneStep({
         setOpenclawUpdate(null)
       }
     } catch {
-      /* 네트워크 오류 무시 */
+      /* ignore network errors */
     }
   }, [])
 
-  // Gateway running 시 1회 체크 + 30분 주기
+  // Check once when Gateway is running + every 30 min
   useEffect(() => {
     if (status !== 'running') return
 
@@ -71,7 +71,7 @@ export default function DoneStep({
     return () => clearInterval(timer)
   }, [status, checkOpenclawUpdate])
 
-  // OpenClaw 업데이트 실행
+  // Execute OpenClaw update
   const handleOpenclawUpdate = useCallback(async () => {
     setUpdating(true)
     setUpdateLogs([])
@@ -98,12 +98,12 @@ export default function DoneStep({
     }
   }, [checkOpenclawUpdate])
 
-  // 자동 시작 설정 로드
+  // Load auto launch settings
   useEffect(() => {
     window.electronAPI.autoLaunch.get().then((r) => setAutoLaunch(r.enabled))
   }, [])
 
-  // 현재 프로바이더/모델 읽기
+  // Read current provider/model
   const loadCurrentConfig = useCallback(() => {
     window.electronAPI.config.read().then((r) => {
       if (r.success && r.config) {
@@ -130,7 +130,7 @@ export default function DoneStep({
     return unsub
   }, [])
 
-  // 트레이에서의 Gateway 상태 변화 구독
+  // Subscribe to Gateway status changes from tray
   useEffect(() => {
     const unsub = window.electronAPI.gateway.onStatusChanged((s) => {
       setStatus(s === 'running' ? 'running' : 'stopped')
@@ -213,7 +213,7 @@ export default function DoneStep({
         <LanguageSwitcher />
       </div>
 
-      {/* 로고 + 상태 */}
+      {/* Logo + status */}
       <div className="flex items-center gap-4">
         <div className="relative">
           <div
@@ -266,7 +266,7 @@ export default function DoneStep({
         </div>
       </div>
 
-      {/* OpenClaw 업데이트 배너 */}
+      {/* OpenClaw update banner */}
       {(openclawUpdate || updating) && (
         <div className="w-full max-w-md flex items-center gap-3 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500/15 via-blue-500/10 to-blue-500/15 border border-blue-500/30">
           <span className="text-base">{updating ? '⏳' : '🔄'}</span>
@@ -300,7 +300,7 @@ export default function DoneStep({
         </div>
       )}
 
-      {/* 액션 버튼 */}
+      {/* Action buttons */}
       <div className="flex gap-3">
         {status === 'running' && (
           <Button
@@ -330,7 +330,7 @@ export default function DoneStep({
         ) : null}
       </div>
 
-      {/* Gateway 로그 */}
+      {/* Gateway logs */}
       {logs.length > 0 && (
         <div className="w-full max-w-sm">
           <button
@@ -344,7 +344,7 @@ export default function DoneStep({
         </div>
       )}
 
-      {/* ─── Star + 카카오 채팅 배너 ─── */}
+      {/* ─── Star + KakaoTalk chat banner ─── */}
       <div className="w-full max-w-md grid grid-cols-2 gap-2">
         <button
           onClick={() => window.open('https://github.com/ybgwon96/easyclaw', '_blank')}
@@ -368,7 +368,7 @@ export default function DoneStep({
         </button>
       </div>
 
-      {/* ─── 액션 그리드 (3열) ─── */}
+      {/* ─── Action grid (3 columns) ─── */}
       <div className="w-full max-w-md grid grid-cols-3 gap-2">
         <button
           onClick={toggleAutoLaunch}
@@ -422,7 +422,7 @@ export default function DoneStep({
         </button>
       </div>
 
-      {/* ─── 삭제 모달 ─── */}
+      {/* ─── Uninstall modal ─── */}
       {uninstall.modal && (
         <ManagementModal
           title={t('uninstall.title')}
@@ -461,7 +461,7 @@ export default function DoneStep({
         </ManagementModal>
       )}
 
-      {/* ─── 복원 모달 ─── */}
+      {/* ─── Restore modal ─── */}
       {backup.restoreModal && (
         <ManagementModal
           title={t('backupRestore.restoreTitle')}
@@ -484,7 +484,7 @@ export default function DoneStep({
         </ManagementModal>
       )}
 
-      {/* ─── 백업 모달 ─── */}
+      {/* ─── Backup modal ─── */}
       {backup.backupModal && backup.backupModal !== 'confirm' && (
         <ManagementModal
           title={t('done.settingsBackup')}
@@ -495,7 +495,7 @@ export default function DoneStep({
         />
       )}
 
-      {/* ─── 프로바이더 전환 모달 ─── */}
+      {/* ─── Provider switch modal ─── */}
       {showProviderModal && (
         <ProviderSwitchModal
           currentProvider={currentProvider}
@@ -503,7 +503,7 @@ export default function DoneStep({
           onClose={() => setShowProviderModal(false)}
           onSuccess={() => {
             loadCurrentConfig()
-            // Gateway 재시작은 IPC handler(config:switch-provider)에서 처리
+            // Gateway restart is handled by IPC handler (config:switch-provider)
             setStatus('starting')
             setTimeout(async () => {
               const s = await window.electronAPI.gateway.status()

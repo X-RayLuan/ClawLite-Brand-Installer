@@ -57,7 +57,7 @@ const buildMenu = (status: 'running' | 'stopped'): Menu =>
         try {
           await startGateway()
         } catch {
-          /* refreshStatus에서 상태 반영 */
+          /* status will be reflected in refreshStatus */
         }
         await refreshStatus()
       }
@@ -130,7 +130,7 @@ export const rebuildTrayMenu = (): void => {
 
 export const startPolling = (): void => {
   if (pollTimer) return
-  // 즉시 1회 실행 후 10초 인터벌
+  // Run once immediately, then poll every 10 seconds
   refreshStatus()
   pollTimer = setInterval(refreshStatus, 10_000)
 }

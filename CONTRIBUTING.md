@@ -26,13 +26,13 @@ npm run dev
 
 ### Available Scripts
 
-| Command              | Description                      |
-| -------------------- | -------------------------------- |
-| `npm run dev`        | Start in development mode        |
-| `npm run build`      | Type check + build               |
-| `npm run lint`       | Run ESLint                       |
-| `npm run format`     | Run Prettier                     |
-| `npm run typecheck`  | Run TypeScript type checking     |
+| Command             | Description                  |
+| ------------------- | ---------------------------- |
+| `npm run dev`       | Start in development mode    |
+| `npm run build`     | Type check + build           |
+| `npm run lint`      | Run ESLint                   |
+| `npm run format`    | Run Prettier                 |
+| `npm run typecheck` | Run TypeScript type checking |
 
 ## Architecture
 
@@ -46,6 +46,7 @@ src/
 ```
 
 When adding a new IPC channel, you must update three files:
+
 1. `src/main/ipc-handlers.ts` — Register the handler
 2. `src/preload/index.ts` — Expose via `electronAPI`
 3. `src/preload/index.d.ts` — Add type declaration
@@ -55,6 +56,7 @@ When adding a new IPC channel, you must update three files:
 ### Reporting Bugs
 
 Use the [bug report template](https://github.com/ybgwon96/easyclaw/issues/new?template=bug_report.md) to file a bug. Include:
+
 - Steps to reproduce
 - Expected vs actual behavior
 - OS and app version

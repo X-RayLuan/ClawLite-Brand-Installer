@@ -48,9 +48,9 @@ EasyClawは、[OpenClaw](https://github.com/openclaw/openclaw) AIエージェン
 
 ## ダウンロード
 
-| OS      | ファイル | リンク                                                             |
-| ------- | -------- | ------------------------------------------------------------------ |
-| macOS   | `.dmg`   | [ダウンロード](https://github.com/ybgwon96/easyclaw/releases/latest/download/easy-claw.dmg) |
+| OS      | ファイル | リンク                                                                                            |
+| ------- | -------- | ------------------------------------------------------------------------------------------------- |
+| macOS   | `.dmg`   | [ダウンロード](https://github.com/ybgwon96/easyclaw/releases/latest/download/easy-claw.dmg)       |
 | Windows | `.exe`   | [ダウンロード](https://github.com/ybgwon96/easyclaw/releases/latest/download/easy-claw-setup.exe) |
 
 [easyclaw.kr](https://easyclaw.kr)からもOSに合わせたファイルを自動選択できます。
@@ -73,13 +73,13 @@ EasyClawは、[OpenClaw](https://github.com/openclaw/openclaw) AIエージェン
 
 ## 技術スタック
 
-| 領域         | 技術                                                     |
-| ------------ | -------------------------------------------------------- |
+| 領域           | 技術                                                    |
+| -------------- | ------------------------------------------------------- |
 | フレームワーク | Electron + electron-vite                                |
 | フロントエンド | React 19 + Tailwind CSS 4                               |
-| 言語         | TypeScript                                               |
-| ビルド/CI    | electron-builder + GitHub Actions                        |
-| コード署名   | Apple Notarization (macOS) / SignPath (Windows, 準備中)  |
+| 言語           | TypeScript                                              |
+| ビルド/CI      | electron-builder + GitHub Actions                       |
+| コード署名     | Apple Notarization (macOS) / SignPath (Windows, 準備中) |
 
 ## 開発
 

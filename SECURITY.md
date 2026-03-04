@@ -32,5 +32,6 @@ We will acknowledge receipt within 48 hours and aim to provide a fix within 7 da
 ## Verification
 
 You can verify our releases:
+
 - [VirusTotal scan results](https://www.virustotal.com/gui/url/800de679ba1d63c29023776989a531d27c4510666a320ae3b440c7785b2ab149) — 0 detections across 94 antivirus engines
 - Build artifacts are produced by GitHub Actions from the public source code

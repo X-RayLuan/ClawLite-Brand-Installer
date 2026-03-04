@@ -20,7 +20,7 @@ const exec = (
 
 export const checkPort = async (port = 18789): Promise<{ inUse: boolean; pid?: string }> => {
   const isWin = platform() === 'win32'
-  // Windows에서도 호스트 OS의 netstat으로 포트 체크 (WSL localhost 포워딩)
+  // On Windows, check port via host OS netstat (WSL localhost forwarding)
   const out = isWin
     ? await exec('netstat', ['-ano'], process.env as NodeJS.ProcessEnv, true)
     : await exec('lsof', ['-i', `:${port}`, '-t'], getPathEnv())

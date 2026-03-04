@@ -30,7 +30,7 @@ export default function TroubleshootStep({ onBack }: TroubleshootStepProps): Rea
 
   const CHECKING: I18nText = { key: 'common:status.checking' }
 
-  // 진단 상태 — 번역 키를 저장하고 렌더 시점에 t()로 변환
+  // Diagnostic status — store i18n keys and resolve with t() at render time
   const [envStatus, setEnvStatus] = useState<DiagStatus>('checking')
   const [envDetail, setEnvDetail] = useState<I18nText>(CHECKING)
   const [envFixing, setEnvFixing] = useState(false)

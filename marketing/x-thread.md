@@ -23,6 +23,7 @@ Download → Run → Enter API key. Done.
 OpenClaw is an amazing open-source AI agent that runs on Telegram.
 
 But setting it up means:
+
 - Installing Node.js
 - Running npm commands
 - Editing JSON config files

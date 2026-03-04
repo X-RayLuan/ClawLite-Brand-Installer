@@ -4,11 +4,11 @@ type LogoState = 'idle' | 'loading' | 'success' | 'error'
 
 const stateStyles: Record<LogoState, CSSProperties> = {
   idle: {},
-  loading: { animation: 'lobster-bounce 0.8s ease-in-out infinite' },
+  loading: { animation: 'logo-bounce 0.8s ease-in-out infinite' },
   success: { filter: 'drop-shadow(0 0 16px rgba(52, 211, 153, 0.5))' },
   error: {
     filter: 'drop-shadow(0 0 16px rgba(251, 113, 133, 0.5))',
-    animation: 'lobster-shake 0.5s ease-in-out'
+    animation: 'logo-shake 0.5s ease-in-out'
   }
 }
 
@@ -19,18 +19,32 @@ export default function LobsterLogo({
   state?: LogoState
   size?: number
 }): React.JSX.Element {
+  const fillColor = {
+    idle: '#da7756',
+    loading: '#da7756',
+    success: '#34d399',
+    error: '#fb7185'
+  }[state]
+
+  const strokeColor = {
+    idle: '#e8a88e',
+    loading: '#e8a88e',
+    success: '#6ee7b7',
+    error: '#fda4af'
+  }[state]
+
   return (
     <>
       <style>{`
-        @keyframes lobster-bounce {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          30% { transform: translateY(-6px) rotate(-2deg); }
-          70% { transform: translateY(-6px) rotate(2deg); }
+        @keyframes logo-bounce {
+          0%, 100% { transform: translateY(0); }
+          30% { transform: translateY(-6px); }
+          70% { transform: translateY(-6px); }
         }
-        @keyframes lobster-shake {
+        @keyframes logo-shake {
           0%, 100% { transform: translateX(0); }
-          20% { transform: translateX(-3px) rotate(-1deg); }
-          40% { transform: translateX(3px) rotate(1deg); }
+          20% { transform: translateX(-3px); }
+          40% { transform: translateX(3px); }
           60% { transform: translateX(-2px); }
           80% { transform: translateX(2px); }
         }
@@ -38,49 +52,42 @@ export default function LobsterLogo({
       <svg
         width={size}
         height={size}
-        viewBox="0 0 120 120"
+        viewBox="0 0 80 80"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         style={{ transition: 'filter 0.4s, transform 0.4s', ...stateStyles[state] }}
       >
-        <defs>
-          <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#fb923c" />
-            <stop offset="100%" stopColor="#c2410c" />
-          </linearGradient>
-        </defs>
-        {/* antennae */}
+        {/* Code brackets */}
         <path
-          d="M45 15 Q36 4 29 7"
-          stroke="#fb923c"
-          strokeWidth="2.5"
-          strokeLinecap="round"
+          d="M22 28 L10 40 L22 52"
           fill="none"
-        />
-        <path
-          d="M75 15 Q84 4 91 7"
-          stroke="#fb923c"
-          strokeWidth="2.5"
+          stroke={strokeColor}
+          strokeWidth="4"
           strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity="0.6"
+        />
+        <path
+          d="M58 28 L70 40 L58 52"
           fill="none"
+          stroke={strokeColor}
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          opacity="0.6"
         />
-        {/* body */}
+        {/* Central sparkle */}
         <path
-          d="M60 12 C32 12 16 35 16 55 C16 74 30 93 44 98 L44 108 L53 108 L53 98 C56 99 60 100 60 100 C60 100 64 99 67 98 L67 108 L76 108 L76 98 C90 93 104 74 104 55 C104 35 88 12 60 12Z"
-          fill="url(#g)"
+          d="M40 14 C42 28, 52 38, 66 40 C52 42, 42 52, 40 66 C38 52, 28 42, 14 40 C28 38, 38 28, 40 14Z"
+          fill={fillColor}
+          opacity="0.9"
         />
-        {/* left claw */}
-        <path d="M20 44 C6 39 1 49 5 58 C9 67 19 63 24 54 C27 48 24 44 20 44Z" fill="url(#g)" />
-        {/* right claw */}
+        {/* Small accent sparkle */}
         <path
-          d="M100 44 C114 39 119 49 115 58 C111 67 101 63 96 54 C93 48 96 44 100 44Z"
-          fill="url(#g)"
+          d="M60 16 C61 22, 64 25, 70 26 C64 27, 61 30, 60 36 C59 30, 56 27, 50 26 C56 25, 59 22, 60 16Z"
+          fill={fillColor}
+          opacity="0.4"
         />
-        {/* eyes */}
-        <circle cx="45" cy="40" r="7" fill="#050810" />
-        <circle cx="75" cy="40" r="7" fill="#050810" />
-        <circle cx="47" cy="38" r="3" fill="#34d4b0" />
-        <circle cx="77" cy="38" r="3" fill="#34d4b0" />
       </svg>
     </>
   )

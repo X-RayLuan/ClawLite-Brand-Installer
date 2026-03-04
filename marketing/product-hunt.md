@@ -44,6 +44,7 @@ I'm the maker of EasyClaw. I built this because I kept seeing people in the Open
 The hardest technical challenge was automating WSL installation on Windows. WSL has 6 different states, and the installation requires a system reboot. We save the wizard state so users can pick up right where they left off after rebooting.
 
 Some things I'm proud of:
+
 - The entire setup takes under 2 minutes
 - It works on both macOS (Intel + Apple Silicon) and Windows
 - It's fully open source — you can inspect every line of code
