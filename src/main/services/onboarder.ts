@@ -66,7 +66,7 @@ const createRunCmd = (): ((
       let fullArgs: string[]
 
       if (isWindows) {
-        // WSL 모드: wsl -d Ubuntu -u root -- bash -lc "cmd args..."
+        // WSL mode: wsl -d Ubuntu -u root -- bash -lc "cmd args..."
         const script = `${cmd} ${args.map((a) => `'${a.replace(/'/g, "'\\''")}'`).join(' ')}`
         fullCmd = 'wsl'
         fullArgs = ['-d', 'Ubuntu', '-u', 'root', '--', 'bash', '-lc', script]
@@ -124,7 +124,7 @@ export const runOnboard = async (
   const fixPath = join(homedir(), '.openclaw', 'ipv4-fix.js')
   const runCmd = createRunCmd()
 
-  // Node.js 22 autoSelectFamily + IPv6 미지원 환경에서 Telegram API ETIMEDOUT 방지
+  // Prevent Telegram API ETIMEDOUT on environments without IPv6 (Node.js 22 autoSelectFamily)
   if (isMac) {
     const macOcDir = join(homedir(), '.openclaw')
     if (!existsSync(macOcDir)) mkdirSync(macOcDir, { recursive: true })
@@ -147,10 +147,10 @@ export const runOnboard = async (
     })
   }
 
-  // 기존 daemon 제거 + 프로세스 종료 + 깨진 설정 정리
+  // Remove existing daemon + kill processes + clean up broken config
   if (isWindows) {
     await wslKillOpenclaw().catch(() => {})
-    // WSL 내부 설정 파일 정리
+    // Clean up config files inside WSL
     try {
       await runInWsl('rm -f /root/.openclaw/openclaw.json')
     } catch {
@@ -201,7 +201,7 @@ export const runOnboard = async (
         }
     }
   }
-  // 포트 해제 + Telegram long-poll 해제 대기
+  // Wait for port release + Telegram long-poll release
   await new Promise((resolve) => setTimeout(resolve, 5000))
 
   const authFlags: Record<OnboardConfig['provider'], string[]> = {
@@ -223,7 +223,7 @@ export const runOnboard = async (
     '18789',
     '--gateway-bind',
     'loopback',
-    // Windows WSL: DoneStep에서 포그라운드 프로세스로 시작하므로 데몬 설치 불필요
+    // Windows WSL: no daemon install needed since DoneStep starts as foreground process
     ...(isWindows ? [] : ['--install-daemon', '--daemon-runtime', 'node']),
     '--skip-skills'
   ]
@@ -235,8 +235,8 @@ export const runOnboard = async (
       log
     )
   } catch (e) {
-    // onboard가 gateway 연결 테스트(1006)로 실패해도
-    // config 파일이 생성되었으면 계속 진행
+    // Even if onboard fails with gateway connection test (1006),
+    // continue if config file was created
     if (isWindows) {
       try {
         await readWslFile('/root/.openclaw/openclaw.json')
@@ -251,7 +251,7 @@ export const runOnboard = async (
     }
   }
 
-  // onboard --install-daemon이 데몬을 시작하므로 즉시 중지
+  // Stop immediately since onboard --install-daemon starts the daemon
   if (isMac) {
     const uid = process.getuid?.() ?? ''
     await new Promise<void>((resolve) => {
@@ -267,7 +267,7 @@ export const runOnboard = async (
     await new Promise((resolve) => setTimeout(resolve, 5000))
   }
 
-  // 제공사별 권장 모델 설정
+  // Set recommended model per provider
   const defaultModels: Record<OnboardConfig['provider'], string> = {
     anthropic: 'anthropic/claude-sonnet-4-6',
     google: 'google/gemini-3-flash',
@@ -305,7 +305,7 @@ export const runOnboard = async (
     }
   }
 
-  // config 파일 패치
+  // Patch config file
   if (isWindows) {
     try {
       const raw = await readWslFile('/root/.openclaw/openclaw.json')
@@ -325,7 +325,7 @@ export const runOnboard = async (
   }
   log(t('onboarder.basicDone'))
 
-  // plist에 IPv4 fix 적용 (macOS만)
+  // Apply IPv4 fix to plist (macOS only)
   if (isMac) {
     const plistAfter = join(homedir(), 'Library', 'LaunchAgents', 'ai.openclaw.gateway.plist')
     if (existsSync(plistAfter)) {
@@ -389,7 +389,7 @@ export const runOnboard = async (
     await waitTelegramClear(config.telegramBotToken)
   }
 
-  // 모든 패치 완료 후 데몬 재시작
+  // Restart daemon after all patches are complete
   if (isWindows) {
     log(t('onboarder.cleaningGateway'))
     await wslKillOpenclaw().catch(() => {})
@@ -410,7 +410,7 @@ export const runOnboard = async (
   return { botUsername }
 }
 
-// ─── 프로바이더 전환 ───
+// ─── Provider switch ───
 
 export interface CurrentConfig {
   provider?: string
@@ -433,7 +433,7 @@ export const readCurrentConfig = async (): Promise<CurrentConfig | null> => {
     const cfg = JSON.parse(raw) as any
     const model = cfg?.agents?.defaults?.model?.primary as string | undefined
     const hasTelegram = !!cfg?.channels?.telegram?.botToken
-    // 모델 ID에서 프로바이더 추출 (e.g. "anthropic/claude-sonnet-4-6" → "anthropic")
+    // Extract provider from model ID (e.g. "anthropic/claude-sonnet-4-6" → "anthropic")
     const provider = model?.split('/')[0]
     return { provider, model, hasTelegram }
   } catch {
@@ -456,7 +456,7 @@ export const switchProvider = async (
 
   log(t('onboarder.switchStarting'))
 
-  // 1. 기존 Telegram 토큰 보존
+  // 1. Preserve existing Telegram token
   let savedTelegram: Record<string, unknown> | null = null
   try {
     let raw: string
@@ -474,13 +474,13 @@ export const switchProvider = async (
     /* no config yet */
   }
 
-  // 2. Telegram 409 충돌 방지
+  // 2. Prevent Telegram 409 conflict
   if (savedTelegram && (savedTelegram as { botToken?: string }).botToken) {
     log(t('onboarder.cleaningTelegram'))
     await waitTelegramClear((savedTelegram as { botToken: string }).botToken)
   }
 
-  // 3. 기존 프로세스 정리
+  // 3. Clean up existing processes
   log(t('onboarder.cleaningGateway'))
   if (isWindows) {
     await wslKillOpenclaw().catch(() => {})
@@ -493,7 +493,7 @@ export const switchProvider = async (
   }
   await new Promise((resolve) => setTimeout(resolve, 3000))
 
-  // 4. 기존 설정/인증 파일 삭제
+  // 4. Delete existing config/auth files
   if (isWindows) {
     try {
       await runInWsl('rm -f /root/.openclaw/openclaw.json')
@@ -524,7 +524,7 @@ export const switchProvider = async (
     }
   }
 
-  // 5. openclaw onboard 재실행
+  // 5. Re-run openclaw onboard
   log(t('onboarder.settingNewProvider'))
   const authFlags: Record<OnboardConfig['provider'], string[]> = {
     anthropic: ['--auth-choice', 'apiKey', '--anthropic-api-key', config.apiKey],
@@ -568,7 +568,7 @@ export const switchProvider = async (
     log(t('onboarder.configCreatedSkipGw'))
   }
 
-  // 6. 데몬 즉시 중지 (macOS)
+  // 6. Stop daemon immediately (macOS)
   if (isMac) {
     const uid = process.getuid?.() ?? ''
     await new Promise<void>((resolve) => {
@@ -584,7 +584,7 @@ export const switchProvider = async (
     await new Promise((resolve) => setTimeout(resolve, 3000))
   }
 
-  // 7. 모델 패치
+  // 7. Patch model
   log(t('onboarder.applyingModel'))
   const defaultModels: Record<OnboardConfig['provider'], string> = {
     anthropic: 'anthropic/claude-sonnet-4-6',
@@ -624,7 +624,7 @@ export const switchProvider = async (
         }
       }
     }
-    // Telegram 토큰 복원
+    // Restore Telegram token
     if (telegram) {
       ocConfig.channels = { ...ocConfig.channels, telegram }
     }

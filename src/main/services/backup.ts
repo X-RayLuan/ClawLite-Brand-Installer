@@ -50,7 +50,7 @@ const tarExtractMac = (srcFile: string): Promise<void> =>
     child.on('error', reject)
   })
 
-// ─── Windows: WSL 내 tar ───
+// ─── Windows: tar inside WSL ───
 
 const tarCreateWsl = (destFile: string): Promise<void> =>
   new Promise((resolve, reject) => {
@@ -113,13 +113,13 @@ const ensureIpv4Fix = async (): Promise<void> => {
   if (platform() !== 'darwin') return
   const fixPath = join(homedir(), '.openclaw', 'ipv4-fix.js')
   if (!existsSync(fixPath)) return
-  // 현재 세션 launchd 환경에 NODE_OPTIONS 설정
+  // Set NODE_OPTIONS in current session's launchd environment
   await new Promise<void>((r) => {
     const child = spawn('launchctl', ['setenv', 'NODE_OPTIONS', `--require=${fixPath}`])
     child.on('close', () => r())
     child.on('error', () => r())
   })
-  // plist에 NODE_OPTIONS 영구 패치
+  // Permanently patch NODE_OPTIONS into plist
   const plist = join(homedir(), 'Library', 'LaunchAgents', 'ai.openclaw.gateway.plist')
   if (!existsSync(plist)) return
   let xml = readFileSync(plist, 'utf-8')
@@ -131,7 +131,7 @@ const ensureIpv4Fix = async (): Promise<void> => {
   writeFileSync(plist, xml)
 }
 
-// ─── Telegram long-poll 정리 ───
+// ─── Telegram long-poll cleanup ───
 
 const clearTelegramPoll = async (): Promise<void> => {
   const isWin = platform() === 'win32'
@@ -184,7 +184,7 @@ export const exportBackup = async (
 ): Promise<{ success: boolean; error?: string }> => {
   const isWin = platform() === 'win32'
 
-  // 소스 확인
+  // Verify source exists
   if (!isWin && !existsSync(openclawDir())) {
     return { success: false, error: t('backup.noConfig') }
   }
@@ -245,17 +245,17 @@ export const importBackup = async (
       await tarExtractMac(backupFile)
     }
 
-    // IPv4 fix 적용 (launchctl setenv) + Telegram long-poll 409 충돌 방지
+    // Apply IPv4 fix (launchctl setenv) + prevent Telegram long-poll 409 conflict
     await ensureIpv4Fix()
     await clearTelegramPoll()
 
     try {
       await startGateway()
     } catch {
-      /* 사용자가 수동으로 시작 가능 */
+      /* user can start manually */
     }
 
-    // Gateway install이 plist를 재생성했을 수 있으므로 다시 패치
+    // Re-patch since gateway install may have regenerated plist
     await ensureIpv4Fix()
 
     return { success: true }

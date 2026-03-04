@@ -44,9 +44,9 @@ EasyClaw is a desktop installer that sets up [OpenClaw](https://github.com/openc
 
 ## Download
 
-| OS      | File   | Link                                                             |
-| ------- | ------ | ---------------------------------------------------------------- |
-| macOS   | `.dmg` | [Download](https://github.com/ybgwon96/easyclaw/releases/latest/download/easy-claw.dmg) |
+| OS      | File   | Link                                                                                          |
+| ------- | ------ | --------------------------------------------------------------------------------------------- |
+| macOS   | `.dmg` | [Download](https://github.com/ybgwon96/easyclaw/releases/latest/download/easy-claw.dmg)       |
 | Windows | `.exe` | [Download](https://github.com/ybgwon96/easyclaw/releases/latest/download/easy-claw-setup.exe) |
 
 You can also download from [easyclaw.kr](https://easyclaw.kr) — it auto-detects your OS.
@@ -69,13 +69,13 @@ We're in the process of obtaining a Windows code signing certificate. You may se
 
 ## Tech Stack
 
-| Area        | Technology                                               |
-| ----------- | -------------------------------------------------------- |
-| Framework   | Electron + electron-vite                                 |
-| Frontend    | React 19 + Tailwind CSS 4                                |
-| Language    | TypeScript                                               |
-| Build/CI    | electron-builder + GitHub Actions                        |
-| Code Sign   | Apple Notarization (macOS) / SignPath (Windows, pending) |
+| Area      | Technology                                               |
+| --------- | -------------------------------------------------------- |
+| Framework | Electron + electron-vite                                 |
+| Frontend  | React 19 + Tailwind CSS 4                                |
+| Language  | TypeScript                                               |
+| Build/CI  | electron-builder + GitHub Actions                        |
+| Code Sign | Apple Notarization (macOS) / SignPath (Windows, pending) |
 
 ## Development
 

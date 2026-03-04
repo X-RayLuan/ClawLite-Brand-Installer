@@ -28,10 +28,8 @@
   var FEATURE_ICONS = {
     check:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
-    mic:
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M16 12a4 4 0 01-8 0"/><path d="M12 16v4"/><path d="M8 22h8"/></svg>',
-    chat:
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>',
+    mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 014 4v2a4 4 0 01-8 0V6a4 4 0 014-4z"/><path d="M16 12a4 4 0 01-8 0"/><path d="M12 16v4"/><path d="M8 22h8"/></svg>',
+    chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>',
     search:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
     globe:
@@ -78,19 +76,36 @@
     if (_dom.iconWrap) _dom.iconWrap.innerHTML = getHeroIcon(product)
 
     // Tagline
-    if (_dom.tagline) _dom.tagline.innerHTML = safeHtml(getT(prefix + 'hero.tagline', 'hero.tagline'))
+    if (_dom.tagline)
+      _dom.tagline.innerHTML = safeHtml(getT(prefix + 'hero.tagline', 'hero.tagline'))
 
     // Download links
-    _dom.macLinks.forEach(function (a) { a.href = base + p.dmg })
-    _dom.winLinks.forEach(function (a) { a.href = base + p.exe })
-    _dom.ghLinks.forEach(function (a) { a.href = 'https://github.com/' + p.github })
-    _dom.chatLinks.forEach(function (a) { a.href = p.openChat })
+    _dom.macLinks.forEach(function (a) {
+      a.href = base + p.dmg
+    })
+    _dom.winLinks.forEach(function (a) {
+      a.href = base + p.exe
+    })
+    _dom.ghLinks.forEach(function (a) {
+      a.href = 'https://github.com/' + p.github
+    })
+    _dom.chatLinks.forEach(function (a) {
+      a.href = p.openChat
+    })
 
     // Labels
-    _dom.macLabels.forEach(function (el) { el.textContent = getT(prefix + 'hero.downloadMac', 'hero.downloadMac') })
-    _dom.winLabels.forEach(function (el) { el.textContent = getT(prefix + 'hero.downloadWin', 'hero.downloadWin') })
-    _dom.ghLabels.forEach(function (el) { el.textContent = getT(prefix + 'hero.starGithub', 'hero.starGithub') })
-    _dom.chatLabels.forEach(function (el) { el.textContent = getT(prefix + 'hero.openChat', 'hero.openChat') })
+    _dom.macLabels.forEach(function (el) {
+      el.textContent = getT(prefix + 'hero.downloadMac', 'hero.downloadMac')
+    })
+    _dom.winLabels.forEach(function (el) {
+      el.textContent = getT(prefix + 'hero.downloadWin', 'hero.downloadWin')
+    })
+    _dom.ghLabels.forEach(function (el) {
+      el.textContent = getT(prefix + 'hero.starGithub', 'hero.starGithub')
+    })
+    _dom.chatLabels.forEach(function (el) {
+      el.textContent = getT(prefix + 'hero.openChat', 'hero.openChat')
+    })
 
     // Demo GIF
     if (_dom.heroDemo) {
@@ -118,8 +133,10 @@
     var p = PRODUCTS[product]
     var prefix = p.i18nPrefix
 
-    if (_dom.featuresTitle) _dom.featuresTitle.textContent = getT(prefix + 'features.title', 'features.title')
-    if (_dom.featuresSub) _dom.featuresSub.textContent = getT(prefix + 'features.sub', 'features.sub')
+    if (_dom.featuresTitle)
+      _dom.featuresTitle.textContent = getT(prefix + 'features.title', 'features.title')
+    if (_dom.featuresSub)
+      _dom.featuresSub.textContent = getT(prefix + 'features.sub', 'features.sub')
 
     var cards = _dom.featureCards
     p.features.forEach(function (feat, i) {
@@ -196,7 +213,8 @@
 
     document.title = getT(prefix + 'meta.title', 'meta.title')
     var metaDesc = document.querySelector('meta[name="description"]')
-    if (metaDesc) metaDesc.setAttribute('content', getT(prefix + 'meta.description', 'meta.description'))
+    if (metaDesc)
+      metaDesc.setAttribute('content', getT(prefix + 'meta.description', 'meta.description'))
   }
 
   /* ── Version badge (cached) ── */
@@ -206,15 +224,16 @@
 
     // Use cache if available
     if (_versionCache[product]) {
-      _dom.badge.textContent =
-        _versionCache[product] + ' ' + getT('hero.versionRelease')
+      _dom.badge.textContent = _versionCache[product] + ' ' + getT('hero.versionRelease')
       return
     }
 
     _dom.badge.textContent = getT('hero.versionLoading')
 
     fetch('https://api.github.com/repos/' + p.github + '/releases/latest')
-      .then(function (r) { return r.json() })
+      .then(function (r) {
+        return r.json()
+      })
       .then(function (d) {
         if (d.tag_name) {
           _versionCache[product] = d.tag_name

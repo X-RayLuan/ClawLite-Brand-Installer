@@ -36,7 +36,7 @@ export const uninstallOpenClaw = async (
   const isWin = platform() === 'win32'
   const log = (msg: string): void => sendProgress(win, msg)
 
-  // 1. Gateway 중지
+  // 1. Stop gateway
   log(t('uninstaller.stoppingGw'))
   try {
     await stopGateway()
@@ -52,13 +52,13 @@ export const uninstallOpenClaw = async (
     await npmUninstallMac()
   }
 
-  // 3. (옵션) 설정 디렉토리 삭제
+  // 3. (Optional) Remove config directory
   if (opts.removeConfig) {
     log(t('uninstaller.removingConfig'))
     if (isWin) {
       await runInWsl('rm -rf /root/.openclaw', 15000)
     } else {
-      // ipv4-fix.js 삭제 전 NODE_OPTIONS 정리 (안 하면 모든 Node 프로세스 MODULE_NOT_FOUND)
+      // Clean up NODE_OPTIONS before deleting ipv4-fix.js (otherwise all Node processes get MODULE_NOT_FOUND)
       await new Promise<void>((r) => {
         spawn('launchctl', ['unsetenv', 'NODE_OPTIONS'])
           .on('close', () => r())

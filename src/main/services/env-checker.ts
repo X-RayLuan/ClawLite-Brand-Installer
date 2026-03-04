@@ -207,7 +207,7 @@ export const checkEnvironment = async (): Promise<EnvCheckResult> => {
   let openclawVersion: string | null = null
 
   if (os === 'windows') {
-    // Windows: WSL 상태 확인 후, ready면 WSL 내부에서 Node.js/OpenClaw 체크
+    // Windows: check WSL state, then check Node.js/OpenClaw inside WSL if ready
     wslState = await checkWslState()
 
     if (wslState === 'ready') {
@@ -222,7 +222,7 @@ export const checkEnvironment = async (): Promise<EnvCheckResult> => {
       openclawInstalled = result.openclawInstalled
       openclawVersion = result.openclawVersion
     }
-    // wslState !== 'ready'이면 모두 false로 유지
+    // Keep all false if wslState !== 'ready'
   } else {
     // macOS / Linux
     const result = await checkNodeAndOpenclaw(runCommand)

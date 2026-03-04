@@ -9,10 +9,10 @@ export interface GatewayResult {
   error?: string
 }
 
-// Windows WSL: gateway를 포그라운드 프로세스로 유지
+// Windows WSL: keep gateway as a foreground process
 let wslGatewayProcess: ChildProcess | null = null
 
-// Gateway 로그 콜백 (ipc-handlers에서 설정)
+// Gateway log callback (set from ipc-handlers)
 let logCallback: ((msg: string) => void) | null = null
 
 export const setGatewayLogCallback = (cb: ((msg: string) => void) | null): void => {
@@ -225,7 +225,7 @@ export const startGateway = async (): Promise<GatewayResult> => {
       msg.includes('not loaded') || msg.includes('not installed') || msg.includes('bootstrap')
     if (!isServiceMissing) return { status: 'error', error: msg }
 
-    // launchd 서비스 미설치 시 자동 설치 후 재시도
+    // Auto-install and retry when launchd service is not installed
     emitLog(t('gateway.notInstalledRetry'))
     try {
       await runGateway(['install'])

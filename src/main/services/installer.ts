@@ -104,9 +104,9 @@ const runWithLog = (
     child.on('error', reject)
   })
 
-// ─── WSL 설치 함수 (Windows) ───
+// ─── WSL installation functions (Windows) ───
 
-/** WSL 자체를 설치 (wsl --install -d Ubuntu --no-launch) — UAC 권한 상승 */
+/** Install WSL itself (wsl --install -d Ubuntu --no-launch) — UAC elevation */
 export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boolean }> => {
   const log = (msg: string): void => sendProgress(win, msg)
 
@@ -128,7 +128,7 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
     const errLines = ((err as RunError).lines ?? []).join('\n')
     const combined = errMsg + '\n' + errLines
 
-    // exit 4294967295 = ERROR_ALREADY_EXISTS: Ubuntu가 이미 등록됨
+    // exit 4294967295 = ERROR_ALREADY_EXISTS: Ubuntu already registered
     if (combined.includes('4294967295')) {
       log(t('installer.ubuntuAlreadyRegistered'))
       try {
@@ -141,7 +141,7 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
     }
     const lower = combined.toLowerCase()
 
-    // 사용자가 UAC 거부 또는 권한 오류
+    // User denied UAC or permission error
     if (
       lower.includes('canceled') ||
       lower.includes('cancelled') ||
@@ -151,11 +151,11 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
     ) {
       throw new Error(t('installer.adminRequired'))
     }
-    // wsl 명령어를 찾을 수 없는 경우 (Windows 버전 미지원)
+    // wsl command not found (unsupported Windows version)
     if (lower.includes('not recognized') || lower.includes('not found')) {
       throw new Error(t('installer.windowsVersionError'))
     }
-    // 가상화 비활성화
+    // Virtualization disabled
     if (lower.includes('virtualization') || lower.includes('hyper-v')) {
       throw new Error(t('installer.biosVirtualization'))
     }
@@ -165,7 +165,7 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
   return { needsReboot: true }
 }
 
-/** WSL Ubuntu 내부에 Node.js 22 LTS 설치 (NodeSource apt 저장소) */
+/** Install Node.js 22 LTS inside WSL Ubuntu (NodeSource apt repo) */
 export const installNodeWsl = async (win: BrowserWindow): Promise<void> => {
   const log = (msg: string): void => sendProgress(win, msg)
 
@@ -185,7 +185,7 @@ export const installNodeWsl = async (win: BrowserWindow): Promise<void> => {
   log(t('installer.nodeWslDone'))
 }
 
-/** WSL Ubuntu 내부에 openclaw 글로벌 설치 */
+/** Install openclaw globally inside WSL Ubuntu */
 export const installOpenClawWsl = async (win: BrowserWindow): Promise<void> => {
   const log = (msg: string): void => sendProgress(win, msg)
   log(t('installer.ocWslInstalling'))
@@ -193,7 +193,7 @@ export const installOpenClawWsl = async (win: BrowserWindow): Promise<void> => {
   log(t('installer.ocWslDone'))
 }
 
-// ─── macOS 설치 함수 ───
+// ─── macOS installation functions ───
 
 export const installNodeMac = async (win: BrowserWindow): Promise<void> => {
   const log = (msg: string): void => sendProgress(win, msg)
@@ -207,7 +207,7 @@ export const installNodeMac = async (win: BrowserWindow): Promise<void> => {
   log(t('installer.nodeDone'))
 }
 
-// getPathEnv는 path-utils.ts에서 import (NODE_OPTIONS 삭제 포함)
+// getPathEnv imported from path-utils.ts (includes NODE_OPTIONS removal)
 
 const isXcodeCliInstalled = (): Promise<boolean> =>
   new Promise((resolve) => {

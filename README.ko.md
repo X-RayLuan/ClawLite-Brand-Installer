@@ -48,9 +48,9 @@
 
 ## 다운로드
 
-| OS      | 파일   | 링크                                                             |
-| ------- | ------ | ---------------------------------------------------------------- |
-| macOS   | `.dmg` | [다운로드](https://github.com/ybgwon96/easyclaw/releases/latest/download/easy-claw.dmg) |
+| OS      | 파일   | 링크                                                                                          |
+| ------- | ------ | --------------------------------------------------------------------------------------------- |
+| macOS   | `.dmg` | [다운로드](https://github.com/ybgwon96/easyclaw/releases/latest/download/easy-claw.dmg)       |
 | Windows | `.exe` | [다운로드](https://github.com/ybgwon96/easyclaw/releases/latest/download/easy-claw-setup.exe) |
 
 [easyclaw.kr](https://easyclaw.kr)에서도 OS에 맞는 파일이 자동으로 선택됩니다.

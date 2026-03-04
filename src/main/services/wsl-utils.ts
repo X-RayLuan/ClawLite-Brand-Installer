@@ -34,11 +34,11 @@ const runCmd = (cmd: string, args: string[], timeout = 15000): Promise<string> =
   })
 
 export const checkWslState = async (): Promise<WslState> => {
-  // wsl 사용 가능 여부 확인 (--version은 Store WSL에서만 지원)
+  // Check WSL availability (--version only supported on Store WSL)
   try {
     await runCmd('wsl', ['--version'])
   } catch {
-    // inbox WSL은 --version 미지원 → wsl.exe 존재 여부로 재확인
+    // Inbox WSL doesn't support --version → re-check by verifying wsl.exe exists
     try {
       await runCmd('where', ['wsl'])
     } catch {
@@ -46,24 +46,24 @@ export const checkWslState = async (): Promise<WslState> => {
     }
   }
 
-  // wsl --status로 리부트 필요 여부 확인
+  // Check if reboot is needed via wsl --status
   try {
     const status = await runCmd('wsl', ['--status'])
     if (status.includes('reboot') || status.includes('restart') || status.includes('재부팅')) {
       return 'needs_reboot'
     }
   } catch {
-    // --status 실패 시 리부트 필요 가능성
-    // wsl --list로 추가 확인 진행
+    // Reboot may be needed if --status fails
+    // Proceed with additional check via wsl --list
   }
 
-  // Ubuntu 배포판 존재 여부 확인
+  // Check if Ubuntu distro exists
   try {
     const list = await runCmd('wsl', ['--list', '--verbose'])
     if (!list.includes(WSL_DISTRO)) {
       return 'no_distro'
     }
-    // Ubuntu가 등록되어 있지만 정상 작동하는지 확인
+    // Verify Ubuntu is registered and working properly
     try {
       await runCmd('wsl', ['-d', WSL_DISTRO, '-u', WSL_USER, '--', 'echo', 'ok'])
       return 'ready'
@@ -71,12 +71,12 @@ export const checkWslState = async (): Promise<WslState> => {
       return 'not_initialized'
     }
   } catch {
-    // --list 실패 → WSL 설치되었지만 아직 초기화 안 됨
+    // --list failed → WSL installed but not yet initialized
     return 'not_installed'
   }
 }
 
-/** WSL Ubuntu 내에서 bash -lc로 명령 실행 (nvm PATH 자동 로드) */
+/** Run command via bash -lc inside WSL Ubuntu (auto-loads nvm PATH) */
 export const runInWsl = (script: string, timeout = 30000): Promise<string> =>
   new Promise((resolve, reject) => {
     const child = spawn('wsl', ['-d', WSL_DISTRO, '-u', WSL_USER, '--', 'bash', '-lc', script])
@@ -99,7 +99,7 @@ export const runInWsl = (script: string, timeout = 30000): Promise<string> =>
     })
   })
 
-/** WSL 내 파일 읽기 */
+/** Read file inside WSL */
 export const readWslFile = (path: string): Promise<string> =>
   new Promise((resolve, reject) => {
     const child = spawn('wsl', ['-d', WSL_DISTRO, '-u', WSL_USER, '--', 'cat', path])
@@ -120,7 +120,7 @@ export const readWslFile = (path: string): Promise<string> =>
     })
   })
 
-/** WSL 내 파일 쓰기 */
+/** Write file inside WSL */
 export const writeWslFile = (path: string, content: string): Promise<void> =>
   new Promise((resolve, reject) => {
     const child = spawn('wsl', ['-d', WSL_DISTRO, '-u', WSL_USER, '--', 'tee', path])
@@ -128,7 +128,7 @@ export const writeWslFile = (path: string, content: string): Promise<void> =>
       child.kill()
       reject(new Error(`Timeout writing ${path}`))
     }, 10000)
-    child.stdout.resume() // tee stdout 소비하여 버퍼 hang 방지
+    child.stdout.resume() // Consume tee stdout to prevent buffer hang
     child.stdin.write(content, () => child.stdin.end())
     child.on('close', (code) => {
       clearTimeout(timer)
