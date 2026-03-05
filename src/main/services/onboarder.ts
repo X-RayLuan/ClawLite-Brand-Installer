@@ -151,16 +151,18 @@ export const runOnboard = async (
   // Remove existing daemon + kill processes + clean up broken config
   if (isWindows) {
     await wslKillOpenclaw().catch(() => {})
-    // Clean up config files inside WSL
+    // Clean up config files inside WSL (preserve auth-profiles.json for OAuth)
     try {
       await runInWsl('rm -f /root/.openclaw/openclaw.json')
     } catch {
       /* ignore */
     }
+    const wslAuthClean =
+      config.authMethod === 'oauth'
+        ? 'rm -f /root/.openclaw/agents/main/agent/auth.json'
+        : 'rm -f /root/.openclaw/agents/main/agent/auth.json /root/.openclaw/agents/main/agent/auth-profiles.json'
     try {
-      await runInWsl(
-        'rm -f /root/.openclaw/agents/main/agent/auth.json /root/.openclaw/agents/main/agent/auth-profiles.json'
-      )
+      await runInWsl(wslAuthClean)
     } catch {
       /* ignore */
     }
@@ -192,7 +194,10 @@ export const runOnboard = async (
         /* ignore */
       }
     const agentAuthDir = join(macOcDir, 'agents', 'main', 'agent')
-    for (const f of ['auth.json', 'auth-profiles.json']) {
+    // OAuth: preserve auth-profiles.json since credentials were already saved
+    const authFilesToClean =
+      config.authMethod === 'oauth' ? ['auth.json'] : ['auth.json', 'auth-profiles.json']
+    for (const f of authFilesToClean) {
       const p = join(agentAuthDir, f)
       if (existsSync(p))
         try {
@@ -205,11 +210,11 @@ export const runOnboard = async (
   // Wait for port release + Telegram long-poll release
   await new Promise((resolve) => setTimeout(resolve, 5000))
 
-  // OAuth: use pre-stored tokens, no API key needed
+  // OAuth: credentials already saved to auth-profiles.json, skip auth in onboard
   const effectiveProvider = config.authMethod === 'oauth' ? 'openai-codex' : config.provider
   const effectiveAuthFlags =
     config.authMethod === 'oauth'
-      ? ['--auth-choice', 'openai-codex']
+      ? ['--auth-choice', 'skip']
       : {
           anthropic: ['--auth-choice', 'apiKey', '--anthropic-api-key', config.apiKey!],
           google: ['--auth-choice', 'gemini-api-key', '--gemini-api-key', config.apiKey!],
@@ -505,27 +510,30 @@ export const switchProvider = async (
   }
   await new Promise((resolve) => setTimeout(resolve, 3000))
 
-  // 4. Delete existing config/auth files
+  // 4. Delete existing config/auth files (preserve auth-profiles.json for OAuth)
+  const preserveAuthProfiles = config.authMethod === 'oauth'
   if (isWindows) {
     try {
       await runInWsl('rm -f /root/.openclaw/openclaw.json')
     } catch {
       /* ignore */
     }
+    const wslAuthClean = preserveAuthProfiles
+      ? 'rm -f /root/.openclaw/agents/main/agent/auth.json'
+      : 'rm -f /root/.openclaw/agents/main/agent/auth.json /root/.openclaw/agents/main/agent/auth-profiles.json'
     try {
-      await runInWsl(
-        'rm -f /root/.openclaw/agents/main/agent/auth.json /root/.openclaw/agents/main/agent/auth-profiles.json'
-      )
+      await runInWsl(wslAuthClean)
     } catch {
       /* ignore */
     }
   } else {
     const ocDir = join(homedir(), '.openclaw')
-    for (const f of [
+    const filesToClean = [
       'openclaw.json',
       join('agents', 'main', 'agent', 'auth.json'),
-      join('agents', 'main', 'agent', 'auth-profiles.json')
-    ]) {
+      ...(preserveAuthProfiles ? [] : [join('agents', 'main', 'agent', 'auth-profiles.json')])
+    ]
+    for (const f of filesToClean) {
       const p = join(ocDir, f)
       if (existsSync(p))
         try {
@@ -538,10 +546,11 @@ export const switchProvider = async (
 
   // 5. Re-run openclaw onboard
   log(t('onboarder.settingNewProvider'))
+  // OAuth: credentials already saved to auth-profiles.json, skip auth in onboard
   const effectiveProvider = config.authMethod === 'oauth' ? 'openai-codex' : config.provider
   const effectiveAuthFlags =
     config.authMethod === 'oauth'
-      ? ['--auth-choice', 'openai-codex']
+      ? ['--auth-choice', 'skip']
       : {
           anthropic: ['--auth-choice', 'apiKey', '--anthropic-api-key', config.apiKey!],
           google: ['--auth-choice', 'gemini-api-key', '--gemini-api-key', config.apiKey!],
