@@ -54,6 +54,23 @@ const waitTelegramClear = async (token: string): Promise<void> => {
 
 import { getPathEnv, findBin } from './path-utils'
 
+const OAUTH_PROFILE_ID = 'openai-codex:default'
+
+const DEFAULT_MODELS: Record<string, string> = {
+  anthropic: 'anthropic/claude-sonnet-4-6',
+  google: 'google/gemini-3-flash',
+  openai: 'openai/gpt-5.2',
+  'openai-codex': 'openai-codex/gpt-5.3-codex',
+  minimax: 'minimax/MiniMax-M2.5',
+  glm: 'zai/glm-5'
+}
+
+const MODEL_SPECS: Partial<
+  Record<OnboardConfig['provider'], { contextWindow: number; maxTokens: number }>
+> = {
+  minimax: { contextWindow: 1000000, maxTokens: 16384 }
+}
+
 const createRunCmd = (): ((
   cmd: string,
   args: string[],
@@ -279,21 +296,6 @@ export const runOnboard = async (
   }
 
   // Set recommended model per provider
-  const defaultModels: Record<string, string> = {
-    anthropic: 'anthropic/claude-sonnet-4-6',
-    google: 'google/gemini-3-flash',
-    openai: 'openai/gpt-5.2',
-    'openai-codex': 'openai-codex/gpt-5.3-codex',
-    minimax: 'minimax/MiniMax-M2.5',
-    glm: 'zai/glm-5'
-  }
-
-  const modelSpecs: Partial<
-    Record<OnboardConfig['provider'], { contextWindow: number; maxTokens: number }>
-  > = {
-    minimax: { contextWindow: 1000000, maxTokens: 16384 }
-  }
-
   const patchConfig = (ocConfig: Record<string, unknown>): void => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cfg = ocConfig as any
@@ -301,19 +303,18 @@ export const runOnboard = async (
     cfg.agents.defaults = cfg.agents.defaults ?? {}
     cfg.agents.defaults.model = {
       ...cfg.agents.defaults.model,
-      primary: config.modelId || defaultModels[effectiveProvider]
+      primary: config.modelId || DEFAULT_MODELS[effectiveProvider]
     }
     // OAuth: register auth profile reference in config
     if (config.authMethod === 'oauth') {
-      const profileId = 'openai-codex:default'
       cfg.auth = cfg.auth ?? {}
       cfg.auth.profiles = {
         ...cfg.auth.profiles,
-        [profileId]: { provider: 'openai-codex', mode: 'oauth' }
+        [OAUTH_PROFILE_ID]: { provider: 'openai-codex', mode: 'oauth' }
       }
-      cfg.auth.order = { ...cfg.auth.order, 'openai-codex': [profileId] }
+      cfg.auth.order = { ...cfg.auth.order, 'openai-codex': [OAUTH_PROFILE_ID] }
     }
-    const spec = modelSpecs[config.provider]
+    const spec = MODEL_SPECS[config.provider]
     if (spec && cfg.models?.providers) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       for (const provider of Object.values(cfg.models.providers) as any[]) {
@@ -621,20 +622,6 @@ export const switchProvider = async (
 
   // 7. Patch model
   log(t('onboarder.applyingModel'))
-  const defaultModels: Record<string, string> = {
-    anthropic: 'anthropic/claude-sonnet-4-6',
-    google: 'google/gemini-3-flash',
-    openai: 'openai/gpt-5.2',
-    'openai-codex': 'openai-codex/gpt-5.3-codex',
-    minimax: 'minimax/MiniMax-M2.5',
-    glm: 'zai/glm-5'
-  }
-
-  const modelSpecs: Partial<
-    Record<OnboardConfig['provider'], { contextWindow: number; maxTokens: number }>
-  > = {
-    minimax: { contextWindow: 1000000, maxTokens: 16384 }
-  }
 
   const patchSwitchConfig = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -643,22 +630,20 @@ export const switchProvider = async (
   ): void => {
     ocConfig.agents = ocConfig.agents ?? {}
     ocConfig.agents.defaults = ocConfig.agents.defaults ?? {}
-    const selectedModel = config.modelId || defaultModels[effectiveProvider]
     ocConfig.agents.defaults.model = {
       ...ocConfig.agents.defaults.model,
-      primary: selectedModel
+      primary: config.modelId || DEFAULT_MODELS[effectiveProvider]
     }
     // OAuth: register auth profile reference in config
     if (config.authMethod === 'oauth') {
-      const profileId = 'openai-codex:default'
       ocConfig.auth = ocConfig.auth ?? {}
       ocConfig.auth.profiles = {
         ...ocConfig.auth.profiles,
-        [profileId]: { provider: 'openai-codex', mode: 'oauth' }
+        [OAUTH_PROFILE_ID]: { provider: 'openai-codex', mode: 'oauth' }
       }
-      ocConfig.auth.order = { ...ocConfig.auth.order, 'openai-codex': [profileId] }
+      ocConfig.auth.order = { ...ocConfig.auth.order, 'openai-codex': [OAUTH_PROFILE_ID] }
     }
-    const spec = modelSpecs[effectiveProvider as OnboardConfig['provider']]
+    const spec = MODEL_SPECS[effectiveProvider as OnboardConfig['provider']]
     if (spec && ocConfig.models?.providers) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       for (const provider of Object.values(ocConfig.models.providers) as any[]) {

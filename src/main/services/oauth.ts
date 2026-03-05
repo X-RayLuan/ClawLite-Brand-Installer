@@ -2,7 +2,7 @@ import { BrowserWindow } from 'electron'
 import { randomBytes, createHash } from 'crypto'
 import { createServer, type Server } from 'http'
 import { join } from 'path'
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
+import { readFileSync, writeFileSync, mkdirSync } from 'fs'
 import { platform, homedir } from 'os'
 import { readWslFile, writeWslFile } from './wsl-utils'
 
@@ -17,6 +17,7 @@ const CALLBACK_PORT = 1455
 
 // Auth profile store path
 const AUTH_PROFILE_FILENAME = 'auth-profiles.json'
+const OAUTH_PROFILE_ID = 'openai-codex:default'
 
 const SUCCESS_HTML = `<!doctype html>
 <html><head><meta charset="utf-8"><title>OK</title></head>
@@ -97,8 +98,7 @@ const startCallbackServer = (
   expectedState: string
 ): Promise<{ server: Server; waitForCode: () => Promise<string | null> }> => {
   return new Promise((resolve) => {
-    let receivedCode: string | null = null
-    let cancelled = false
+    let codeResolve: ((code: string | null) => void) | null = null
 
     const server = createServer((req, res) => {
       const url = new URL(req.url || '', 'http://localhost')
@@ -121,21 +121,18 @@ const startCallbackServer = (
       res.statusCode = 200
       res.setHeader('Content-Type', 'text/html; charset=utf-8')
       res.end(SUCCESS_HTML)
-      receivedCode = code
+      codeResolve?.(code)
     })
 
     server.listen(CALLBACK_PORT, '127.0.0.1', () => {
       resolve({
         server,
-        waitForCode: async () => {
-          // Poll for up to 120 seconds
-          for (let i = 0; i < 1200; i++) {
-            if (receivedCode) return receivedCode
-            if (cancelled) return null
-            await new Promise((r) => setTimeout(r, 100))
-          }
-          return null
-        }
+        waitForCode: () =>
+          new Promise<string | null>((r) => {
+            codeResolve = r
+            // Timeout after 120 seconds
+            setTimeout(() => r(null), 120_000)
+          })
       })
     })
 
@@ -143,13 +140,13 @@ const startCallbackServer = (
       console.error('[OAuth] Failed to bind callback server:', err)
       resolve({
         server,
-        waitForCode: async () => null
+        waitForCode: () => Promise.resolve(null)
       })
     })
 
     // Allow external cancellation
     server.once('close', () => {
-      cancelled = true
+      codeResolve?.(null)
     })
   })
 }
@@ -170,8 +167,6 @@ const saveCredentials = async (creds: {
     expires: creds.expires,
     accountId: creds.accountId
   }
-  const profileId = 'openai-codex:default'
-
   if (isWindows) {
     // WSL: read/write via wsl-utils
     const wslPath = '/root/.openclaw/agents/main/agent/' + AUTH_PROFILE_FILENAME
@@ -183,14 +178,14 @@ const saveCredentials = async (creds: {
       store = { version: 1, profiles: {} }
     }
     const profiles = (store.profiles ?? {}) as Record<string, unknown>
-    profiles[profileId] = credential
+    profiles[OAUTH_PROFILE_ID] = credential
     store.profiles = profiles
     await writeWslFile(wslPath, JSON.stringify(store, null, 2))
   } else {
     // macOS/Linux: direct file access
     const agentDir = join(homedir(), '.openclaw', 'agents', 'main', 'agent')
     const filePath = join(agentDir, AUTH_PROFILE_FILENAME)
-    if (!existsSync(agentDir)) mkdirSync(agentDir, { recursive: true })
+    mkdirSync(agentDir, { recursive: true })
     let store: Record<string, unknown>
     try {
       store = JSON.parse(readFileSync(filePath, 'utf-8'))
@@ -198,7 +193,7 @@ const saveCredentials = async (creds: {
       store = { version: 1, profiles: {} }
     }
     const profiles = (store.profiles ?? {}) as Record<string, unknown>
-    profiles[profileId] = credential
+    profiles[OAUTH_PROFILE_ID] = credential
     store.profiles = profiles
     writeFileSync(filePath, JSON.stringify(store, null, 2))
   }
@@ -240,7 +235,7 @@ export const loginOpenAICodex = async (win: BrowserWindow): Promise<void> => {
     // Race: callback server vs window close
     const codePromise = waitForCode()
     const closePromise = new Promise<null>((resolve) => {
-      authWindow.on('closed', () => resolve(null))
+      authWindow.once('closed', () => resolve(null))
     })
 
     const code = await Promise.race([codePromise, closePromise])
