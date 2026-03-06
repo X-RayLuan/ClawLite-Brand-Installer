@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="resources/icon.png" width="120" alt="EasyClaw Logo">
+  <img src="resources/icon.png" width="120" alt="ClawLite Logo">
 </p>
 
-<h1 align="center">EasyClaw</h1>
+<h1 align="center">ClawLite</h1>
 
 <p align="center">
   <strong>一键安装 OpenClaw AI 代理</strong>
@@ -13,14 +13,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ybgwon96/easyclaw/releases/latest"><img src="https://img.shields.io/github/v/release/ybgwon96/easyclaw?color=f97316&style=flat-square" alt="Release"></a>
-  <a href="https://github.com/ybgwon96/easyclaw/releases"><img src="https://img.shields.io/github/downloads/ybgwon96/easyclaw/total?color=34d399&style=flat-square" alt="Downloads"></a>
+  <a href="https://github.com/X-RayLuan/Mac-Installer/releases/latest"><img src="https://img.shields.io/github/v/release/X-RayLuan/Mac-Installer?color=f97316&style=flat-square" alt="Release"></a>
+  <a href="https://github.com/X-RayLuan/Mac-Installer/releases"><img src="https://img.shields.io/github/downloads/X-RayLuan/Mac-Installer/total?color=34d399&style=flat-square" alt="Downloads"></a>
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-blue?style=flat-square" alt="Platform">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-8b5cf6?style=flat-square" alt="License"></a>
 </p>
 
 <p align="center">
-  <a href="https://easyclaw.kr">官网</a> · <a href="https://github.com/ybgwon96/easyclaw/releases/latest">下载</a> · <a href="https://github.com/openclaw/openclaw">OpenClaw</a>
+  <a href="https://clawlite.ai">官网</a> · <a href="https://github.com/X-RayLuan/Mac-Installer/releases/latest">下载</a> · <a href="https://github.com/openclaw/openclaw">OpenClaw</a>
 </p>
 
 ---
@@ -33,9 +33,9 @@
   <img src="docs/screenshots/done.png" width="270" alt="完成">
 </p>
 
-## 什么是 EasyClaw？
+## 什么是 ClawLite？
 
-EasyClaw 是一个桌面安装器，可以**无需任何终端命令**即可设置 [OpenClaw](https://github.com/openclaw/openclaw) AI 代理。
+ClawLite 是一个桌面安装器，可以**无需任何终端命令**即可设置 [OpenClaw](https://github.com/openclaw/openclaw) AI 代理。
 
 **下载 → 运行 → 输入 API 密钥** — 三步即可完成。
 
@@ -50,10 +50,10 @@ EasyClaw 是一个桌面安装器，可以**无需任何终端命令**即可设�
 
 | 操作系统 | 文件   | 链接                                                                                      |
 | -------- | ------ | ----------------------------------------------------------------------------------------- |
-| macOS    | `.dmg` | [下载](https://github.com/ybgwon96/easyclaw/releases/latest/download/easy-claw.dmg)       |
-| Windows  | `.exe` | [下载](https://github.com/ybgwon96/easyclaw/releases/latest/download/easy-claw-setup.exe) |
+| macOS    | `.dmg` | [下载](https://github.com/X-RayLuan/Mac-Installer/releases/latest/download/clawlite.dmg)       |
+| Windows  | `.exe` | [下载](https://github.com/X-RayLuan/Mac-Installer/releases/latest/download/clawlite-setup.exe) |
 
-也可以从 [easyclaw.kr](https://easyclaw.kr) 下载 — 会自动检测您的操作系统。
+也可以从 [clawlite.kr](https://clawlite.ai) 下载 — 会自动检测您的操作系统。
 
 ## Windows 安全提示
 
