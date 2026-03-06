@@ -138,15 +138,19 @@ const checkNodeAndOpenclaw = async (
   }
 
   if (!openclawInstalled || !openclawVersion) {
-    try {
-      const raw = await run('openclaw', ['--version'])
-      const ver = parseVersion(raw)
-      if (ver) {
-        openclawInstalled = true
-        openclawVersion = ver
+    const bins = ['openclaw', '/opt/homebrew/bin/openclaw', '/usr/local/bin/openclaw']
+    for (const bin of bins) {
+      try {
+        const raw = await run(bin, ['--version'])
+        const ver = parseVersion(raw)
+        if (ver) {
+          openclawInstalled = true
+          openclawVersion = ver
+          break
+        }
+      } catch {
+        /* try next */
       }
-    } catch {
-      /* not installed */
     }
   }
 
