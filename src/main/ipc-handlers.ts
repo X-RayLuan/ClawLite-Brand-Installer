@@ -37,6 +37,8 @@ interface WizardPersistedState {
 const getWizardStatePath = (): string => join(app.getPath('userData'), 'wizard-state.json')
 const getSettingsPath = (): string => join(app.getPath('userData'), 'settings.json')
 
+let handlersRegistered = false
+
 const readSettings = (): Record<string, unknown> => {
   try {
     const p = getSettingsPath()
@@ -63,12 +65,16 @@ export const getSavedLocale = (): string => {
 }
 
 export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void => {
+  if (handlersRegistered) return
+  handlersRegistered = true
+
   const win = (): BrowserWindow => {
     const w = getWin()
     if (!w || w.isDestroyed()) throw new Error('No active window')
     return w
   }
 
+  ipcMain.removeHandler('app:version')
   ipcMain.handle('app:version', () => app.getVersion())
 
   ipcMain.handle('env:check', () => checkEnvironment())
