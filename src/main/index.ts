@@ -103,6 +103,38 @@ function createWindow(): void {
     mainWindow?.loadFile(join(__dirname, '../renderer/index.html')).catch(() => {})
   })
 
+  mainWindow.webContents.on('render-process-gone', () => {
+    mainWindow
+      ?.loadURL(
+        'data:text/html;charset=utf-8,' +
+          encodeURIComponent(
+            '<html><body style="font-family:-apple-system,system-ui;padding:24px;background:#0b1020;color:#e5e7eb"><h2>ClawLite Renderer Crashed</h2><p>Please reinstall the latest build and try again.</p></body></html>'
+          )
+      )
+      .catch(() => {})
+  })
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    // White-screen self-heal: if root is still empty, show fallback diagnostics page.
+    setTimeout(async () => {
+      try {
+        const hasUi = await mainWindow?.webContents.executeJavaScript(
+          "(() => { const r=document.querySelector('#root'); return !!r && r.childElementCount > 0; })()"
+        )
+        if (!hasUi && mainWindow) {
+          await mainWindow.loadURL(
+            'data:text/html;charset=utf-8,' +
+              encodeURIComponent(
+                '<html><body style="font-family:-apple-system,system-ui;padding:24px;background:#0b1020;color:#e5e7eb"><h2>ClawLite UI failed to render</h2><p>Renderer loaded but no UI was mounted.</p><p>Please download the latest release and retry. If issue persists, send this message to support.</p></body></html>'
+              )
+          )
+        }
+      } catch {
+        /* ignore */
+      }
+    }, 1500)
+  })
+
   // Auto-start Gateway when launched hidden
   if (startHidden) {
     startGateway().catch(() => {})
