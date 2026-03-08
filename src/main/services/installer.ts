@@ -189,7 +189,17 @@ export const installNodeWsl = async (win: BrowserWindow): Promise<void> => {
 export const installOpenClawWsl = async (win: BrowserWindow): Promise<void> => {
   const log = (msg: string): void => sendProgress(win, msg)
   log(t('installer.ocWslInstalling'))
-  await runInWsl('npm install -g openclaw@latest', 120000)
+  
+  try {
+    // Try with npm registry mirror for China
+    log('Attempting installation with npm registry...')
+    await runInWsl('npm install -g openclaw@latest --registry=https://registry.npmmirror.com', 180000)
+  } catch (err) {
+    // Fallback to default registry
+    log('Retrying with default npm registry...')
+    await runInWsl('npm install -g openclaw@latest', 180000)
+  }
+  
   log(t('installer.ocWslDone'))
 }
 
