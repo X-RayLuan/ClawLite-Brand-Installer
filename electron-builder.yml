@@ -31,12 +31,11 @@ nsis:
 mac:
   icon: build/icon.icns
   category: public.app-category.developer-tools
-  hardenedRuntime: true
+  hardenedRuntime: false
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
-  identity: "Developer ID Application"
-  notarize: true
+  notarize: false
   target:
     - target: dmg
       arch:
