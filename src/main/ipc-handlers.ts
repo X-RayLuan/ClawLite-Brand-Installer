@@ -74,9 +74,6 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
     return w
   }
 
-  ipcMain.removeHandler('app:version')
-  ipcMain.handle('app:version', () => app.getVersion())
-
   ipcMain.handle('env:check', () => checkEnvironment())
   ipcMain.handle('openclaw:check-update', () => checkOpenclawUpdate())
 
@@ -349,6 +346,7 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
     }
   })
 
+  ipcMain.removeHandler('app:version')
   ipcMain.handle('app:version', () => ({ version: app.getVersion() }))
 
   // Auto update IPC
