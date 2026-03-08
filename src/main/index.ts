@@ -20,8 +20,10 @@ function createWindow(): void {
 
   mainWindow = new BrowserWindow({
     width: 800,
-    height: 600,
-    resizable: false,
+    height: 700,
+    minWidth: 800,
+    minHeight: 700,
+    resizable: true,
     show: false,
     autoHideMenuBar: true,
     titleBarStyle: 'hiddenInset',
