@@ -103,7 +103,7 @@ export default function DoneStep({
   // Load auto launch settings
   useEffect(() => {
     window.electronAPI.autoLaunch.get().then((r) => setAutoLaunch(r.enabled))
-    window.electronAPI.app.version().then((r) => setInstallerVersion(r.version)).catch(() => {})
+    window.electronAPI.app.version().then((v) => setInstallerVersion(v)).catch(() => {})
   }, [])
 
   // Read current provider/model

@@ -102,7 +102,7 @@ interface ElectronAPI {
     openExternal: (url: string) => Promise<{ success: boolean; error?: string }>
   }
   app: {
-    version: () => Promise<{ version: string }>
+    version: () => Promise<string>
   }
   uninstall: {
     openclaw: (opts: { removeConfig: boolean }) => Promise<{ success: boolean; error?: string }>
