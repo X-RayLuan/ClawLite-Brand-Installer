@@ -56,6 +56,14 @@ export APPLE_API_ISSUER=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 npm run build:mac
 ```
 
+Windows signed release (Authenticode):
+
+```bash
+export CSC_LINK=/path/to/windows-codesign.p12
+export CSC_KEY_PASSWORD=your_cert_password
+npm run build:win
+```
+
 ## License
 
 MIT
