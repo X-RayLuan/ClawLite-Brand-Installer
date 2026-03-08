@@ -1,4 +1,5 @@
 import { app, BrowserWindow, shell } from 'electron'
+import { spawnSync } from 'child_process'
 import { join } from 'path'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { registerIpcHandlers, getSavedLocale } from './ipc-handlers'
@@ -160,6 +161,19 @@ app.on('before-quit', () => {
 app.whenReady().then(async () => {
   await initI18nMain(getSavedLocale())
   electronApp.setAppUserModelId('com.clawlite.app')
+
+  if (process.platform === 'win32') {
+    // Cleanup one-time reboot resume key if present
+    spawnSync(
+      'powershell',
+      [
+        '-NoProfile',
+        '-Command',
+        "Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run' -Name 'ClawLiteInstaller' -ErrorAction SilentlyContinue"
+      ],
+      { shell: true }
+    )
+  }
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)

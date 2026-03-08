@@ -1,5 +1,5 @@
 import { ipcMain, BrowserWindow, app } from 'electron'
-import { spawn } from 'child_process'
+import { spawn, spawnSync } from 'child_process'
 import { platform } from 'os'
 import { join } from 'path'
 import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
@@ -303,7 +303,7 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
 
   ipcMain.on('system:reboot', () => {
     if (platform() !== 'win32') return
-    
+
     // Add installer to Windows startup registry before reboot
     const exePath = app.getPath('exe')
     const psCommand = [
@@ -315,28 +315,38 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
       '  exit 1',
       '}'
     ].join(' ')
-    
-    // Set registry key (non-blocking)
-    spawn('powershell', ['-NoProfile', '-Command', psCommand], {
+
+    const write = spawnSync('powershell', ['-NoProfile', '-Command', psCommand], {
       shell: true,
-      detached: true,
-      stdio: 'ignore'
-    }).unref()
-    
-    // Wait a moment for registry write, then reboot
-    setTimeout(() => {
+      encoding: 'utf8'
+    })
+
+    // Only reboot if startup key write succeeded
+    if (write.status === 0) {
       const child = spawn('shutdown', ['/r', '/t', '5'], {
         shell: true,
         detached: true,
         stdio: 'ignore'
       })
       child.unref()
-    }, 1000)
+    }
   })
 
   // External link opener
   ipcMain.handle('system:open-external', async (_e, url: string) => {
     try {
+      const parsed = new URL(url)
+      const isHttps = parsed.protocol === 'https:'
+      const isTelegram = parsed.protocol === 'tg:'
+      const isLocalWebChat =
+        parsed.protocol === 'http:' &&
+        (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost') &&
+        parsed.port === '18789'
+
+      if (!(isHttps || isTelegram || isLocalWebChat)) {
+        return { success: false, error: 'URL not allowed' }
+      }
+
       const { shell } = await import('electron')
       await shell.openExternal(url)
       return { success: true }

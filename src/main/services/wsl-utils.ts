@@ -57,15 +57,20 @@ export const checkWslState = async (): Promise<WslState> => {
     // Proceed with additional check via wsl --list
   }
 
-  // Check if Ubuntu distro exists
+  // Check if any Ubuntu distro exists
   try {
-    const list = await runCmd('wsl', ['--list', '--verbose'])
-    if (!list.includes(WSL_DISTRO)) {
+    const list = await runCmd('wsl', ['--list', '--quiet'])
+    const distros = list
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    const ubuntuDistro = distros.find((d) => /^ubuntu/i.test(d)) || distros.find((d) => d === WSL_DISTRO)
+    if (!ubuntuDistro) {
       return 'no_distro'
     }
-    // Verify Ubuntu is registered and working properly
+    // Verify distro is registered and working properly
     try {
-      await runCmd('wsl', ['-d', WSL_DISTRO, '-u', WSL_USER, '--', 'echo', 'ok'])
+      await runCmd('wsl', ['-d', ubuntuDistro, '-u', WSL_USER, '--', 'echo', 'ok'])
       return 'ready'
     } catch {
       return 'not_initialized'

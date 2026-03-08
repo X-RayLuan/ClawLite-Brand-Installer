@@ -450,11 +450,12 @@ export const runOnboard = async (
       log(t('onboarder.checkingTelegram'))
       const pollState = await waitTelegramClear(config.telegramBotToken)
       if (pollState === 'conflict') {
-        throw new Error(
-          'Telegram polling conflict detected: another client is calling getUpdates. Stop other bots/services, then retry.'
+        log(
+          'Telegram polling conflict detected: another client is calling getUpdates. Continuing setup; fix Telegram later by stopping other polling clients.'
         )
+      } else {
+        log('Telegram polling check passed (no getUpdates conflict).')
       }
-      log('Telegram polling check passed (no getUpdates conflict).')
     }
   }
 

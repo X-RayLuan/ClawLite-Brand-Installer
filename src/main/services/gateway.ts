@@ -45,6 +45,20 @@ const runGateway = (args: string[]): Promise<string> => {
   })
 }
 
+const waitForGatewayPort = async (timeoutMs = 12000): Promise<boolean> => {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const p = await checkPort()
+      if (p.inUse) return true
+    } catch {
+      /* ignore */
+    }
+    await new Promise((r) => setTimeout(r, 500))
+  }
+  return false
+}
+
 const startGatewayWsl = async (): Promise<GatewayResult> => {
   if (wslGatewayProcess) {
     wslGatewayProcess.kill()
@@ -77,10 +91,6 @@ const startGatewayWsl = async (): Promise<GatewayResult> => {
     child.stdout.on('data', (d) => {
       const msg = d.toString().trim()
       if (msg) emitLog(msg)
-      if (!resolved) {
-        resolved = true
-        resolve({ status: 'started' })
-      }
     })
 
     child.stderr.on('data', (d) => {
@@ -88,10 +98,6 @@ const startGatewayWsl = async (): Promise<GatewayResult> => {
       if (msg) {
         emitLog(msg)
         stderrBuffer += msg + '\n'
-      }
-      if (!resolved) {
-        resolved = true
-        resolve({ status: 'started' })
       }
     })
 
@@ -120,12 +126,13 @@ const startGatewayWsl = async (): Promise<GatewayResult> => {
       }
     })
 
-    setTimeout(() => {
+    setTimeout(async () => {
       if (!resolved) {
+        const healthy = await waitForGatewayPort()
         resolved = true
-        resolve({ status: 'started' })
+        resolve(healthy ? { status: 'started' } : { status: 'error', error: 'Gateway health check failed' })
       }
-    }, 3000)
+    }, 1000)
   })
 }
 

@@ -126,7 +126,6 @@ export default function DoneStep({
     if (!gatewayToken) {
       setLogs((prev) => [...prev, 'Web Chat token missing. Please re-run setup or switch provider.'])
       setShowLogs(true)
-      window.electronAPI.system.openExternal(base)
       return
     }
     const url = `${base}?token=${encodeURIComponent(gatewayToken)}`
