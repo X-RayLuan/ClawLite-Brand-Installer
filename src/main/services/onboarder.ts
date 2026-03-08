@@ -20,7 +20,14 @@ interface OnboardResult {
   botUsername?: string
 }
 
-const telegramGet = (url: string): Promise<{ ok: boolean; [k: string]: unknown }> =>
+type TelegramApiResponse = {
+  ok: boolean
+  description?: string
+  error_code?: number
+  result?: unknown
+}
+
+const telegramGet = (url: string): Promise<TelegramApiResponse> =>
   new Promise((resolve) => {
     https
       .get(url, (res) => {
@@ -28,28 +35,39 @@ const telegramGet = (url: string): Promise<{ ok: boolean; [k: string]: unknown }
         res.on('data', (chunk) => (data += chunk))
         res.on('end', () => {
           try {
-            resolve(JSON.parse(data))
+            resolve(JSON.parse(data) as TelegramApiResponse)
           } catch {
-            resolve({ ok: false })
+            resolve({ ok: false, description: 'Invalid Telegram API response' })
           }
         })
       })
-      .on('error', () => resolve({ ok: false }))
+      .on('error', (err) => resolve({ ok: false, description: err.message }))
   })
 
 const fetchBotUsername = async (token: string): Promise<string | undefined> => {
   const json = await telegramGet(`https://api.telegram.org/bot${token}/getMe`)
-  return json.ok ? (json as unknown as { result: { username: string } }).result.username : undefined
+  if (!json.ok) {
+    const reason = json.description || 'Unknown error'
+    throw new Error(`Telegram token validation failed at BotFather stage: ${reason}`)
+  }
+  return (json.result as { username?: string })?.username
 }
 
-const waitTelegramClear = async (token: string): Promise<void> => {
+const waitTelegramClear = async (token: string): Promise<'ok' | 'conflict'> => {
   for (let i = 0; i < 5; i++) {
     const res = await telegramGet(
       `https://api.telegram.org/bot${token}/getUpdates?timeout=0&limit=1`
     )
-    if (res.ok) return
+    if (res.ok) return 'ok'
+
+    const desc = (res.description || '').toLowerCase()
+    if (desc.includes('conflict') || desc.includes('terminated by other getupdates')) {
+      return 'conflict'
+    }
+
     await new Promise((r) => setTimeout(r, 3000))
   }
+  return 'ok'
 }
 
 import { getPathEnv, findBin } from './path-utils'
@@ -405,11 +423,21 @@ export const runOnboard = async (
     }
 
     botUsername = await fetchBotUsername(config.telegramBotToken)
+    if (botUsername) {
+      log(`Telegram token valid (BotFather): @${botUsername}`)
+      log(`Activation guide: open https://t.me/${botUsername} and send /start`)
+    }
   }
 
   if (config.telegramBotToken) {
     log(t('onboarder.checkingTelegram'))
-    await waitTelegramClear(config.telegramBotToken)
+    const pollState = await waitTelegramClear(config.telegramBotToken)
+    if (pollState === 'conflict') {
+      throw new Error(
+        'Telegram polling conflict detected: another client is calling getUpdates. Stop other bots/services, then retry.'
+      )
+    }
+    log('Telegram polling check passed (no getUpdates conflict).')
   }
 
   // Restart daemon after all patches are complete
@@ -505,7 +533,10 @@ export const switchProvider = async (
   // 2. Prevent Telegram 409 conflict
   if (savedTelegram && (savedTelegram as { botToken?: string }).botToken) {
     log(t('onboarder.cleaningTelegram'))
-    await waitTelegramClear((savedTelegram as { botToken: string }).botToken)
+    const pollState = await waitTelegramClear((savedTelegram as { botToken: string }).botToken)
+    if (pollState === 'conflict') {
+      log('Telegram polling conflict detected during cleanup; continuing with config update.')
+    }
   }
 
   // 3. Clean up existing processes
