@@ -460,7 +460,7 @@ export default function DoneStep({
       </div>
 
       {/* Gateway logs */}
-      <div className="w-full max-w-sm min-h-40">
+      <div className="w-full max-w-sm min-h-20">
       {logs.length > 0 && (
         <div className="w-full max-w-sm">
           <div className="mb-1 flex items-center justify-between">
