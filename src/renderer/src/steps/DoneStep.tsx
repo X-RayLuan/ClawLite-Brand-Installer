@@ -128,10 +128,14 @@ export default function DoneStep({
   const openWebChat = async (): Promise<void> => {
     const base = 'http://127.0.0.1:18789/'
 
+    // Avoid stale UI state blocking WebChat: verify live gateway status once
     if (status !== 'running') {
-      setLogs((prev) => [...prev, 'Gateway is still starting. Please wait a few seconds and retry Web Chat.'])
-      setShowLogs(true)
-      return
+      const s = await window.electronAPI.gateway.status()
+      if (s === 'running') {
+        setStatus('running')
+      } else {
+        setLogs((prev) => [...prev, 'Gateway is still starting. Trying to open Web Chat anyway...'])
+      }
     }
 
     let token = gatewayToken
@@ -167,9 +171,8 @@ export default function DoneStep({
     }
 
     if (!ready) {
-      setLogs((prev) => [...prev, 'Gateway is not ready yet. Please retry Web Chat in a moment.'])
+      setLogs((prev) => [...prev, 'Gateway health check is slow; opening Web Chat URL directly...'])
       setShowLogs(true)
-      return
     }
 
     const url = `${base}?token=${encodeURIComponent(token)}`
@@ -220,7 +223,8 @@ export default function DoneStep({
         clean.includes('dnsresultorder=ipv4first') ||
         clean.includes('telegram network unreachable') ||
         clean.includes('continuing setup; fix telegram later') ||
-        clean.includes('telegram: failed (unknown) - fetch failed') ||
+        clean.includes('telegram: failed') ||
+        clean.includes('fetch failed') ||
         clean.includes('memory search is enabled but no embedding provider is configured') ||
         clean.includes('gateway memory probe for default agent is not ready') ||
         clean.includes('no api key found for provider') ||
@@ -266,7 +270,9 @@ export default function DoneStep({
       if (cancelled) return
       setStatus(r.success ? 'running' : 'stopped')
       if (!r.success) {
-        setHasError(true)
+        const err = (r.error || '').toLowerCase()
+        const nonFatal = err.includes('gateway health check failed')
+        if (!nonFatal) setHasError(true)
         if (r.error) {
           setLogs((prev) => [...prev, tRef.current('done.errorPrefix', { msg: r.error })])
           setShowLogs(true)
@@ -293,7 +299,9 @@ export default function DoneStep({
     const r = await settleStartResult(r0)
     setStatus(r.success ? 'running' : 'stopped')
     if (!r.success) {
-      setHasError(true)
+      const err = (r.error || '').toLowerCase()
+      const nonFatal = err.includes('gateway health check failed')
+      if (!nonFatal) setHasError(true)
       if (r.error) {
         setLogs((prev) => [...prev, tRef.current('done.errorPrefix', { msg: r.error })])
         setShowLogs(true)
@@ -309,7 +317,9 @@ export default function DoneStep({
     const r = await settleStartResult(r0)
     setStatus(r.success ? 'running' : 'stopped')
     if (!r.success) {
-      setHasError(true)
+      const err = (r.error || '').toLowerCase()
+      const nonFatal = err.includes('gateway health check failed')
+      if (!nonFatal) setHasError(true)
       if (r.error) {
         setLogs((prev) => [...prev, tRef.current('done.errorPrefix', { msg: r.error })])
         setShowLogs(true)
