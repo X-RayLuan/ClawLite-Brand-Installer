@@ -230,8 +230,14 @@ export default function DoneStep({
         clean.includes('no api key found for provider') ||
         (clean.includes('gateway health check failed') && statusRef.current === 'starting')
 
-      const isError = /\berror\b|\bfailed\b|\bfatal\b|\bexception\b/.test(clean)
-      if (isError && !ignored) {
+      const isErrorWord = /\berror\b|\bfailed\b|\bfatal\b|\bexception\b/.test(clean)
+      const isCoreFailure =
+        clean.includes('gateway') ||
+        clean.includes('[ws]') ||
+        clean.includes('doctor.') ||
+        clean.includes('web chat')
+
+      if (isErrorWord && isCoreFailure && !ignored) {
         setHasError(true)
       }
     })
@@ -492,13 +498,13 @@ export default function DoneStep({
       </div>
 
       {/* ─── Action grid ─── */}
-      <div className="w-full max-w-md grid grid-cols-2 gap-2">
+      <div className="w-full max-w-md grid grid-cols-2 gap-2 auto-rows-fr">
         <button
           onClick={toggleAutoLaunch}
-          className="glass-card flex items-center gap-2 px-3 py-2 cursor-pointer hover:border-primary/40 transition-all duration-200"
+          className="glass-card min-w-0 min-h-11 flex items-center gap-2 px-3 py-2 cursor-pointer hover:border-primary/40 transition-all duration-200"
         >
           <span className="text-sm">⚙️</span>
-          <span className="text-[11px] font-bold flex-1 text-left">{t('done.autoLaunch')}</span>
+          <span className="text-[11px] font-bold flex-1 min-w-0 text-left truncate">{t('done.autoLaunch')}</span>
           <div
             className={`w-8 h-4.5 rounded-full p-0.5 transition-colors duration-200 ${
               autoLaunch ? 'bg-primary' : 'bg-white/15'
@@ -514,32 +520,32 @@ export default function DoneStep({
         {onTroubleshoot && (
           <button
             onClick={onTroubleshoot}
-            className="glass-card flex items-center gap-2 px-3 py-2 cursor-pointer hover:border-primary/40 transition-all duration-200"
+            className="glass-card min-w-0 min-h-11 flex items-center gap-2 px-3 py-2 cursor-pointer hover:border-primary/40 transition-all duration-200"
           >
             <span className="text-sm">🔧</span>
-            <span className="text-[11px] font-bold flex-1 text-left">{t('done.troubleshoot')}</span>
+            <span className="text-[11px] font-bold flex-1 min-w-0 text-left truncate">{t('done.troubleshoot')}</span>
           </button>
         )}
         <button
           onClick={backup.execute}
-          className="glass-card flex items-center gap-2 px-3 py-2 cursor-pointer hover:border-primary/40 transition-all duration-200"
+          className="glass-card min-w-0 min-h-11 flex items-center gap-2 px-3 py-2 cursor-pointer hover:border-primary/40 transition-all duration-200"
         >
           <span className="text-sm">📦</span>
-          <span className="text-[11px] font-bold flex-1 text-left">{t('done.backup')}</span>
+          <span className="text-[11px] font-bold flex-1 min-w-0 text-left truncate">{t('done.backup')}</span>
         </button>
         <button
           onClick={backup.openRestore}
-          className="glass-card flex items-center gap-2 px-3 py-2 cursor-pointer hover:border-primary/40 transition-all duration-200"
+          className="glass-card min-w-0 min-h-11 flex items-center gap-2 px-3 py-2 cursor-pointer hover:border-primary/40 transition-all duration-200"
         >
           <span className="text-sm">📥</span>
-          <span className="text-[11px] font-bold flex-1 text-left">{t('done.restore')}</span>
+          <span className="text-[11px] font-bold flex-1 min-w-0 text-left truncate">{t('done.restore')}</span>
         </button>
         <button
           onClick={uninstall.open}
-          className="col-span-2 glass-card flex items-center gap-2 px-3 py-2 cursor-pointer hover:border-error/40 transition-all duration-200"
+          className="col-span-2 glass-card min-w-0 min-h-11 flex items-center gap-2 px-3 py-2 cursor-pointer hover:border-error/40 transition-all duration-200"
         >
           <span className="text-sm">🗑️</span>
-          <span className="text-[11px] font-bold flex-1 text-left text-error/80">
+          <span className="text-[11px] font-bold flex-1 min-w-0 text-left truncate text-error/80">
             {t('done.delete')}
           </span>
         </button>
