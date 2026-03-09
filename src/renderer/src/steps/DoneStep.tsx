@@ -481,8 +481,8 @@ export default function DoneStep({
         </button>
       </div>
 
-      {/* ─── Action grid (3 columns) ─── */}
-      <div className="w-full max-w-md grid grid-cols-3 gap-2">
+      {/* ─── Action grid ─── */}
+      <div className="w-full max-w-md grid grid-cols-2 md:grid-cols-3 gap-2">
         <button
           onClick={toggleAutoLaunch}
           className="glass-card flex items-center gap-2 px-3 py-2 cursor-pointer hover:border-primary/40 transition-all duration-200"
