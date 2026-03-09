@@ -30,6 +30,7 @@ export default function DoneStep({
   const [currentProvider, setCurrentProvider] = useState<string | undefined>()
   const [showProviderModal, setShowProviderModal] = useState(false)
   const [gatewayToken, setGatewayToken] = useState<string | null>(null)
+  const [hasTelegram, setHasTelegram] = useState(false)
   const [installerVersion, setInstallerVersion] = useState<string>('')
 
   // OpenClaw update state
@@ -113,6 +114,7 @@ export default function DoneStep({
         setCurrentModel(r.config.model || null)
         setCurrentProvider(r.config.provider)
         setGatewayToken(r.config.gatewayToken || null)
+        setHasTelegram(Boolean(r.config.hasTelegram))
       }
     })
   }, [])
@@ -141,6 +143,17 @@ export default function DoneStep({
   useEffect(() => {
     const unsub = window.electronAPI.gateway.onLog((msg) => {
       setLogs((prev) => [...prev, msg])
+      
+      // Strip ANSI color codes before classification
+      const clean = msg.replace(/\x1b\[[0-9;]*m/g, '')
+      
+      // Only treat as error if it contains actual error keywords (not warnings/fallbacks)
+      const isError = /error|failed|fatal|exception/i.test(clean) && 
+                     !/fetch fallback|forcing autoselectFamily|dnsResultOrder/i.test(clean)
+      
+      if (isError) {
+        setHasError(true)
+      }
     })
     return unsub
   }, [])
@@ -318,7 +331,7 @@ export default function DoneStep({
 
       {/* Action buttons */}
       <div className="flex gap-3">
-        {status === 'running' && (
+        {status === 'running' && hasTelegram && (
           <Button
             variant="primary"
             size="lg"
