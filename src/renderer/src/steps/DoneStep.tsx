@@ -492,7 +492,7 @@ export default function DoneStep({
       </div>
 
       {/* ─── Action grid ─── */}
-      <div className="w-full max-w-md grid grid-cols-2 md:grid-cols-3 gap-2">
+      <div className="w-full max-w-md grid grid-cols-2 gap-2">
         <button
           onClick={toggleAutoLaunch}
           className="glass-card flex items-center gap-2 px-3 py-2 cursor-pointer hover:border-primary/40 transition-all duration-200"
@@ -536,7 +536,7 @@ export default function DoneStep({
         </button>
         <button
           onClick={uninstall.open}
-          className="glass-card flex items-center gap-2 px-3 py-2 cursor-pointer hover:border-error/40 transition-all duration-200"
+          className="col-span-2 glass-card flex items-center gap-2 px-3 py-2 cursor-pointer hover:border-error/40 transition-all duration-200"
         >
           <span className="text-sm">🗑️</span>
           <span className="text-[11px] font-bold flex-1 text-left text-error/80">
