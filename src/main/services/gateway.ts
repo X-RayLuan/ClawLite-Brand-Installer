@@ -105,23 +105,39 @@ const startGatewayWsl = async (): Promise<GatewayResult> => {
 
     let resolved = false
     let stderrBuffer = ''
+    let readyBuf = ''
+    let sawReadyHint = false
 
     child.stdout.on('data', (d) => {
-      const msg = d.toString().trim()
+      const raw = d.toString()
+      const msg = raw.trim()
       if (msg) emitLog(msg)
-      if (!resolved && /host mounted at http:\/\/127\.0\.0\.1:18789|gateway running|listening on/i.test(msg)) {
+
+      readyBuf = (readyBuf + raw).slice(-1024)
+      if (/host mounted at http:\/\/127\.0\.0\.1:18789|gateway running|listening on/i.test(readyBuf)) {
+        sawReadyHint = true
+      }
+
+      if (!resolved && /host mounted at http:\/\/127\.0\.0\.1:18789|gateway running|listening on/i.test(raw)) {
         resolved = true
         resolve({ status: 'started' })
       }
     })
 
     child.stderr.on('data', (d) => {
-      const msg = d.toString().trim()
+      const raw = d.toString()
+      const msg = raw.trim()
       if (msg) {
         emitLog(msg)
         stderrBuffer += msg + '\n'
       }
-      if (!resolved && /host mounted at http:\/\/127\.0\.0\.1:18789|gateway running|listening on/i.test(msg)) {
+
+      readyBuf = (readyBuf + raw).slice(-1024)
+      if (/host mounted at http:\/\/127\.0\.0\.1:18789|gateway running|listening on/i.test(readyBuf)) {
+        sawReadyHint = true
+      }
+
+      if (!resolved && /host mounted at http:\/\/127\.0\.0\.1:18789|gateway running|listening on/i.test(raw)) {
         resolved = true
         resolve({ status: 'started' })
       }
@@ -163,7 +179,7 @@ const startGatewayWsl = async (): Promise<GatewayResult> => {
 
         // Fallback: if process is still alive and port is open, treat as started to avoid false negatives
         const port = await checkPort().catch(() => ({ inUse: false }))
-        if (!resolved && child.exitCode === null && port.inUse) {
+        if (!resolved && child.exitCode === null && (port.inUse || sawReadyHint)) {
           resolved = true
           resolve({ status: 'started' })
           return

@@ -42,6 +42,7 @@ export default function DoneStep({
   const [updateLogs, setUpdateLogs] = useState<string[]>([])
   const updateCheckedRef = useRef(false)
   const lastLogRef = useRef<{ msg: string; ts: number } | null>(null)
+  const statusRef = useRef<'starting' | 'running' | 'stopped'>('starting')
 
   const tRef = useRef<TFunction>(t)
   tRef.current = t
@@ -182,6 +183,10 @@ export default function DoneStep({
   }
 
   useEffect(() => {
+    statusRef.current = status
+  }, [status])
+
+  useEffect(() => {
     const unsub = window.electronAPI.gateway.onLog((msg) => {
       const now = Date.now()
       const last = lastLogRef.current
@@ -199,7 +204,8 @@ export default function DoneStep({
         clean.includes('autoselectfamily') ||
         clean.includes('dnsresultorder=ipv4first') ||
         clean.includes('telegram network unreachable') ||
-        clean.includes('continuing setup; fix telegram later')
+        clean.includes('continuing setup; fix telegram later') ||
+        (clean.includes('gateway health check failed') && statusRef.current === 'starting')
 
       const isError = /\berror\b|\bfailed\b|\bfatal\b|\bexception\b/.test(clean)
       if (isError && !ignored) {
@@ -217,6 +223,13 @@ export default function DoneStep({
     return unsub
   }, [])
 
+  const settleStartResult = useCallback(async (r: { success: boolean; error?: string }) => {
+    if (r.success) return r
+    await new Promise((x) => setTimeout(x, 1200))
+    const s = await window.electronAPI.gateway.status()
+    return s === 'running' ? { success: true as const } : r
+  }, [])
+
   useEffect(() => {
     let cancelled = false
 
@@ -229,7 +242,8 @@ export default function DoneStep({
       }
 
       setStatus('starting')
-      const r = await window.electronAPI.gateway.start()
+      const r0 = await window.electronAPI.gateway.start()
+      const r = await settleStartResult(r0)
       if (cancelled) return
       setStatus(r.success ? 'running' : 'stopped')
       if (!r.success) {
@@ -245,7 +259,7 @@ export default function DoneStep({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [settleStartResult])
 
   const handleStop = async (): Promise<void> => {
     await window.electronAPI.gateway.stop()
@@ -256,7 +270,8 @@ export default function DoneStep({
     setStatus('starting')
     setLogs([])
     setHasError(false)
-    const r = await window.electronAPI.gateway.start()
+    const r0 = await window.electronAPI.gateway.start()
+    const r = await settleStartResult(r0)
     setStatus(r.success ? 'running' : 'stopped')
     if (!r.success) {
       setHasError(true)
@@ -271,7 +286,8 @@ export default function DoneStep({
     setStatus('starting')
     setLogs([])
     setHasError(false)
-    const r = await window.electronAPI.gateway.restart()
+    const r0 = await window.electronAPI.gateway.restart()
+    const r = await settleStartResult(r0)
     setStatus(r.success ? 'running' : 'stopped')
     if (!r.success) {
       setHasError(true)
@@ -280,7 +296,7 @@ export default function DoneStep({
         setShowLogs(true)
       }
     }
-  }, [])
+  }, [settleStartResult])
 
   return (
     <div className="flex-1 flex flex-col items-center justify-start pt-10 px-10 gap-3 overflow-hidden">
