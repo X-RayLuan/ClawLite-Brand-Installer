@@ -394,7 +394,7 @@ export default function DoneStep({
       </div>
 
       {/* OpenClaw update banner */}
-      <div className="w-full max-w-md min-h-12">
+      <div className="w-full max-w-md min-h-14 shrink-0">
       {(openclawUpdate || updating) && (
         <div className="w-full max-w-md flex items-center gap-3 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500/15 via-blue-500/10 to-blue-500/15 border border-blue-500/30">
           <span className="text-base">{updating ? '⏳' : '🔄'}</span>
@@ -430,7 +430,7 @@ export default function DoneStep({
       </div>
 
       {/* Action buttons */}
-      <div className="flex gap-3 min-h-9 items-center">
+      <div className="flex gap-3 min-h-9 items-center mt-2 shrink-0">
         {status === 'running' && hasTelegram && (
           <Button
             variant="primary"
