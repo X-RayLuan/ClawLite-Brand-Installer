@@ -459,28 +459,30 @@ export default function DoneStep({
         ) : null}
       </div>
 
-      {/* Gateway logs */}
-      <div className="w-full max-w-sm min-h-20">
-      {logs.length > 0 && (
-        <div className="w-full max-w-sm">
-          <div className="mb-1 flex items-center justify-between">
-            <button
-              onClick={() => setShowLogs((v) => !v)}
-              className="text-[11px] text-text-muted/60 hover:text-text-muted transition-colors"
-            >
-              {showLogs ? t('done.hideLog') : t('done.showLog')}
-              {hasError && <span className="ml-1.5 text-error">{t('done.errorDetected')}</span>}
-            </button>
-            <button
-              onClick={downloadLogs}
-              className="text-[11px] text-primary/80 hover:text-primary transition-colors"
-            >
-              Download Log
-            </button>
+      {/* Gateway logs drawer (isolated at bottom to avoid overlapping controls) */}
+      <div className="w-full max-w-md mt-auto shrink-0">
+        {logs.length > 0 && (
+          <div className="w-full">
+            <div className="mb-1 flex items-center justify-between">
+              <button
+                onClick={() => setShowLogs((v) => !v)}
+                className="text-[11px] text-text-muted/60 hover:text-text-muted transition-colors"
+              >
+                {showLogs ? t('done.hideLog') : t('done.showLog')}
+                {hasError && <span className="ml-1.5 text-error">{t('done.errorDetected')}</span>}
+              </button>
+              <button
+                onClick={downloadLogs}
+                className="text-[11px] text-primary/80 hover:text-primary transition-colors"
+              >
+                Download Log
+              </button>
+            </div>
+            <div className={showLogs ? 'h-36 overflow-hidden' : 'h-0 overflow-hidden'}>
+              <LogViewer lines={logs} />
+            </div>
           </div>
-          {showLogs && <LogViewer lines={logs} />}
-        </div>
-      )}
+        )}
       </div>
 
       {/* ─── Web Chat banner ─── */}
@@ -498,7 +500,7 @@ export default function DoneStep({
       </div>
 
       {/* ─── Action grid ─── */}
-      <div className="w-full max-w-md grid grid-cols-2 gap-2 auto-rows-fr">
+      <div className="w-full max-w-md grid grid-cols-2 gap-2 auto-rows-fr shrink-0">
         <button
           onClick={toggleAutoLaunch}
           className="glass-card min-w-0 min-h-11 flex items-center gap-2 px-3 py-2 cursor-pointer hover:border-primary/40 transition-all duration-200"
