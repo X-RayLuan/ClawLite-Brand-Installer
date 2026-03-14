@@ -15,8 +15,8 @@ export interface EnvCheckResult {
 }
 
 const PATH_EXTENSIONS = [
-  '/usr/local/bin',
   '/opt/homebrew/bin',
+  '/usr/local/bin',
   process.env.NVM_BIN ?? '',
   `${process.env.HOME}/.volta/bin`,
   `${process.env.HOME}/.npm-global/bin`,
@@ -120,7 +120,7 @@ const checkNodeAndOpenclaw = async (
     const raw = await run('node', ['--version'])
     nodeVersion = parseVersion(raw)
     nodeInstalled = nodeVersion !== null
-    nodeVersionOk = nodeVersion ? semverGte(nodeVersion, '22.12.0') : false
+    nodeVersionOk = nodeVersion ? semverGte(nodeVersion, '22.16.0') : false
   } catch {
     /* not installed */
   }

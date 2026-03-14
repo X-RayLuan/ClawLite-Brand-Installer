@@ -372,10 +372,7 @@ export const runOnboard = async (
     if (existsSync(plistAfter)) {
       let xml = readFileSync(plistAfter, 'utf-8')
       if (!xml.includes('ipv4-fix')) {
-        xml = xml.replace(
-          '<string>/usr/local/bin/node</string>',
-          `<string>/usr/local/bin/node</string>\n      <string>--require=${fixPath}</string>`
-        )
+        xml = xml.replace(/(<string>[^<]*\/node<\/string>)/, `$1\n      <string>--require=${fixPath}</string>`)
       }
       const nodeOpt = `--require=${fixPath}`
       if (!xml.includes('NODE_OPTIONS')) {

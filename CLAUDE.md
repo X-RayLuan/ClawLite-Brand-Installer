@@ -151,7 +151,7 @@ Windows에서는 WSL(Windows Subsystem for Linux) Ubuntu 내에서 Node.js/OpenC
 
 | 항목               | 값        | 주요 위치                                                   |
 | ------------------ | --------- | ----------------------------------------------------------- |
-| Node.js 최소 버전  | `22.12.0` | `env-checker.ts`                                            |
+| Node.js 최소 버전  | `22.16.0` | `env-checker.ts`                                            |
 | Gateway 포트       | `18789`   | `troubleshooter.ts`, `onboarder.ts`, `TroubleshootStep.tsx` |
 | 리부트 복원 만료   | 24시간    | `ipc-handlers.ts`                                           |
 | 트레이 폴링 간격   | 10초      | `tray-manager.ts`                                           |

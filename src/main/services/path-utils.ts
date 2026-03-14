@@ -3,8 +3,8 @@ import { platform } from 'os'
 import { join } from 'path'
 
 export const PATH_DIRS = [
-  '/usr/local/bin',
   '/opt/homebrew/bin',
+  '/usr/local/bin',
   process.env.NVM_BIN ?? '',
   `${process.env.HOME}/.volta/bin`,
   `${process.env.HOME}/.npm-global/bin`

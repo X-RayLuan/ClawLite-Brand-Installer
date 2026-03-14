@@ -6,7 +6,7 @@ Thank you for your interest in contributing to ClawLite! This guide will help yo
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) v22.12.0 or higher
+- [Node.js](https://nodejs.org/) v22.16.0 or higher
 - npm (comes with Node.js)
 - macOS or Windows
 

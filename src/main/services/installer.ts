@@ -251,7 +251,7 @@ export const installOpenClawWsl = async (win: BrowserWindow): Promise<void> => {
 
 export const installNodeMac = async (win: BrowserWindow): Promise<void> => {
   const log = (msg: string): void => sendProgress(win, msg)
-  const url = `https://nodejs.org/dist/v22.14.0/node-v22.14.0.pkg`
+  const url = `https://nodejs.org/dist/v22.16.0/node-v22.16.0.pkg`
   const dest = join(tmpdir(), 'node-installer.pkg')
 
   log(t('installer.nodeDownloading'))
