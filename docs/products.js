@@ -8,7 +8,7 @@ var PRODUCTS = {
     accentLight: '#fdba74',
     accentGlow: 'rgba(249, 115, 22, 0.35)',
     accentDark: '#ea580c',
-    github: 'X-RayLuan/Mac-Installer',
+    github: 'X-RayLuan/ClawLite-Installer',
     dmg: 'clawlite.dmg',
     exe: 'clawlite-setup.exe',
     iconTemplate: 'icon-claw',
