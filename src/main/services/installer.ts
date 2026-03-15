@@ -15,6 +15,8 @@ interface RunError extends Error {
   lines?: string[]
 }
 
+const OPENCLAW_PACKAGE_SPEC = 'openclaw@3.13'
+
 const sendProgress = (win: BrowserWindow, msg: string): void => {
   win.webContents.send('install:progress', msg)
 }
@@ -303,7 +305,7 @@ export const installOpenClaw = async (win: BrowserWindow): Promise<void> => {
   await runWithLog('npm', ['config', 'set', 'prefix', npmGlobalDir], log, {
     env: getPathEnv()
   })
-  await runWithLog('npm', ['install', '-g', 'openclaw@latest'], log, {
+  await runWithLog('npm', ['install', '-g', OPENCLAW_PACKAGE_SPEC], log, {
     env: getPathEnv()
   })
 
