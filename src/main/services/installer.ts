@@ -238,12 +238,15 @@ export const installOpenClawWsl = async (win: BrowserWindow): Promise<void> => {
   }
   
   try {
-    log(`Installing openclaw from ${fastestRegistry}...`)
-    await runInWsl(`npm install -g openclaw@latest --registry=${fastestRegistry} --verbose`, 300000)
+    log(`Installing ${OPENCLAW_PACKAGE_SPEC} from ${fastestRegistry}...`)
+    await runInWsl(
+      `npm install -g ${OPENCLAW_PACKAGE_SPEC} --registry=${fastestRegistry} --verbose`,
+      300000
+    )
   } catch (err) {
     // Fallback to official registry
     log('Retrying with official npm registry...')
-    await runInWsl('npm install -g openclaw@latest --verbose', 300000)
+    await runInWsl(`npm install -g ${OPENCLAW_PACKAGE_SPEC} --verbose`, 300000)
   }
   
   log(t('installer.ocWslDone'))

@@ -1,7 +1,8 @@
 import { spawn } from 'child_process'
 import { platform } from 'os'
-import https from 'https'
 import { checkWslState, runInWsl, type WslState } from './wsl-utils'
+
+const TARGET_OPENCLAW_VERSION = '3.13'
 
 export interface EnvCheckResult {
   os: 'macos' | 'windows' | 'linux'
@@ -69,37 +70,7 @@ const semverGte = (version: string, min: string): boolean => {
   return a3 >= b3
 }
 
-const fetchLatestVersion = (pkg: string): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const req = https.get(`https://registry.npmjs.org/${pkg}/latest`, (res) => {
-      if (res.statusCode !== 200) {
-        clearTimeout(timer)
-        res.resume()
-        reject(new Error(`npm registry HTTP ${res.statusCode}`))
-        return
-      }
-      let data = ''
-      res.on('data', (chunk) => (data += chunk))
-      res.on('end', () => {
-        clearTimeout(timer)
-        try {
-          resolve(JSON.parse(data).version)
-        } catch {
-          reject(new Error('parse error'))
-        }
-      })
-    })
-
-    req.on('error', (err) => {
-      clearTimeout(timer)
-      reject(err)
-    })
-
-    const timer = setTimeout(() => {
-      req.destroy()
-      reject(new Error('timeout after 5000ms'))
-    }, 5000)
-  })
+const fetchLatestVersion = (_pkg: string): Promise<string> => Promise.resolve(TARGET_OPENCLAW_VERSION)
 
 const checkNodeAndOpenclaw = async (
   run: (cmd: string, args: string[]) => Promise<string>
