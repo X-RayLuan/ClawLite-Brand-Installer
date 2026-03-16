@@ -118,6 +118,41 @@ const normalizeAuthConfig = (
   }
 }
 
+const getProviderFromModelId = (modelId?: string): string | undefined => modelId?.split('/')[0]
+
+const normalizeModelRouting = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  cfg: any,
+  primaryModel: string
+): void => {
+  cfg.agents = cfg.agents ?? {}
+  cfg.agents.defaults = cfg.agents.defaults ?? {}
+
+  const currentModel = cfg.agents.defaults.model
+  const existingFallbacks = Array.isArray(currentModel?.fallbacks) ? currentModel.fallbacks : []
+  const primaryProvider = getProviderFromModelId(primaryModel)
+  const safeFallbacks = existingFallbacks.filter((candidate: unknown) => {
+    if (typeof candidate !== 'string' || candidate === primaryModel) return false
+    return getProviderFromModelId(candidate) === primaryProvider
+  })
+
+  cfg.agents.defaults.model = {
+    ...currentModel,
+    primary: primaryModel,
+    fallbacks: Array.from(new Set(safeFallbacks))
+  }
+
+  const existingAllowlist =
+    cfg.agents.defaults.models && typeof cfg.agents.defaults.models === 'object'
+      ? cfg.agents.defaults.models
+      : {}
+  const nextAllowlist: Record<string, unknown> = {}
+  for (const modelId of [primaryModel, ...cfg.agents.defaults.model.fallbacks]) {
+    nextAllowlist[modelId] = existingAllowlist[modelId] ?? {}
+  }
+  cfg.agents.defaults.models = nextAllowlist
+}
+
 const createRunCmd = (): ((
   cmd: string,
   args: string[],
@@ -346,12 +381,7 @@ export const runOnboard = async (
   const patchConfig = (ocConfig: Record<string, unknown>): void => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cfg = ocConfig as any
-    cfg.agents = cfg.agents ?? {}
-    cfg.agents.defaults = cfg.agents.defaults ?? {}
-    cfg.agents.defaults.model = {
-      ...cfg.agents.defaults.model,
-      primary: config.modelId || DEFAULT_MODELS[effectiveProvider]
-    }
+    normalizeModelRouting(cfg, config.modelId || DEFAULT_MODELS[effectiveProvider])
     normalizeAuthConfig(cfg, config.authMethod)
     const spec = MODEL_SPECS[config.provider]
     if (spec && cfg.models?.providers) {
@@ -698,12 +728,7 @@ export const switchProvider = async (
     ocConfig: any,
     telegram: Record<string, unknown> | null
   ): void => {
-    ocConfig.agents = ocConfig.agents ?? {}
-    ocConfig.agents.defaults = ocConfig.agents.defaults ?? {}
-    ocConfig.agents.defaults.model = {
-      ...ocConfig.agents.defaults.model,
-      primary: config.modelId || DEFAULT_MODELS[effectiveProvider]
-    }
+    normalizeModelRouting(ocConfig, config.modelId || DEFAULT_MODELS[effectiveProvider])
     normalizeAuthConfig(ocConfig, config.authMethod)
     const spec = MODEL_SPECS[effectiveProvider as OnboardConfig['provider']]
     if (spec && ocConfig.models?.providers) {
