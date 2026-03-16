@@ -24,13 +24,12 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Build macOS (universal)
-        run: npm run build:mac-local
         env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Build an unsigned DMG deterministically in CI.
+          # Passing empty/invalid signing secrets makes electron-builder try to load
+          # a certificate path and fail with "not a file" during mac packaging.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run build:mac-local
       - name: Verify macOS app version matches release tag
         run: node scripts/verify-mac-artifact.mjs "${GITHUB_REF_NAME#v}" dist/clawlite.dmg
       - name: Upload to release
