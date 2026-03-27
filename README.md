@@ -1,10 +1,10 @@
 # ClawLite
 
-**One-click AI agent installer for macOS and Windows.**
+**One-click installer for the OpenClaw AI agent on macOS and Windows.**
 
-ClawLite is the desktop app that helps users set up their AI agent with fewer manual steps and less terminal friction.
+ClawLite is the desktop app that helps users install and set up OpenClaw with fewer manual steps and less terminal friction.
 
-**Download:** <https://github.com/ClawLite/ClawLite-Installer/releases/latest>
+**Download:** <https://github.com/X-RayLuan/ClawLite-Installer/releases/latest>
 
 **Website:** <https://clawlite.ai>
 
@@ -12,7 +12,7 @@ ClawLite is the desktop app that helps users set up their AI agent with fewer ma
 
 # Why people use it
 
-- Faster AI agent setup
+- Faster OpenClaw setup
 - Lower friction for beginners
 - Cross-platform installer flow
 - Easier onboarding for BYOK / token setup
@@ -24,7 +24,7 @@ ClawLite is the desktop app that helps users set up their AI agent with fewer ma
 
 The installer is designed around a simple flow:
 
-**Download → Run → Configure → Launch**
+**Download → Run → Configure → Launch OpenClaw**
 
 Current repo scope includes:
 
@@ -98,4 +98,4 @@ npm run build:win
 
 # Bottom line
 
-ClawLite is the easier path into AI agents, and this repo is the installer that makes that promise real.
+If ClawLite is the easier path into OpenClaw, this repo is the installer that makes that promise real.

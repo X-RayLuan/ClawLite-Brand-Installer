@@ -60,7 +60,7 @@ dmg:
       path: /Applications
 publish:
   provider: github
-  owner: ClawLite
+  owner: X-RayLuan
   repo: ClawLite-Installer
   releaseType: release
 npmRebuild: false

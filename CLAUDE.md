@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ClawLite is a **one-click Electron desktop installer** for the ClawLite AI agent. Built on electron-vite + React + Tailwind CSS 4, supporting macOS and Windows.
+ClawLite is a **one-click Electron desktop installer** for the OpenClaw AI agent. Built on electron-vite + React + Tailwind CSS 4, supporting macOS and Windows.
 
 ## Key Commands
 
@@ -97,7 +97,7 @@ On Windows, Node.js and the agent run inside WSL (Windows Subsystem for Linux) U
 
 ### Release Distribution
 
-Source code and binaries are managed in the `ClawLite/ClawLite-Installer` single repository.
+Source code and binaries are managed in the `X-RayLuan/ClawLite-Installer` single repository.
 
 **Release process** (`npm run release` = `scripts/release.mjs`):
 
@@ -117,8 +117,8 @@ Source code and binaries are managed in the `ClawLite/ClawLite-Installer` single
 
 **Download URLs** (version-independent, always latest):
 
-- macOS: `https://github.com/ClawLite/ClawLite-Installer/releases/latest/download/clawlite.dmg`
-- Windows: `https://github.com/ClawLite/ClawLite-Installer/releases/latest/download/clawlite-setup.exe`
+- macOS: `https://github.com/X-RayLuan/ClawLite-Installer/releases/latest/download/clawlite.dmg`
+- Windows: `https://github.com/X-RayLuan/ClawLite-Installer/releases/latest/download/clawlite-setup.exe`
 
 **Build filenames**: Fixed without version in `electron-builder.yml` (`clawlite.dmg`, `clawlite-setup.exe`)
 

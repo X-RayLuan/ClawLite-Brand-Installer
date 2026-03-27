@@ -172,4 +172,4 @@ if (missing.length > 0) {
   console.log('Missing files (not uploaded):')
   for (const asset of missing) console.log(`  ${asset}`)
 }
-console.log(`Release page: https://github.com/ClawLite/ClawLite-Installer/releases/tag/${tag}`)
+console.log(`Release page: https://github.com/X-RayLuan/ClawLite-Installer/releases/tag/${tag}`)
