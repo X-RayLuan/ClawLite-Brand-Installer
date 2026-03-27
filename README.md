@@ -4,7 +4,7 @@
 
 ClawLite is the desktop app that helps users install and set up OpenClaw with fewer manual steps and less terminal friction.
 
-**Download:** <https://github.com/X-RayLuan/ClawLite-Installer/releases/latest>
+**Download:** <https://github.com/X-RayLuan/ClawLite-Brand-Installer/releases/latest>
 
 **Website:** <https://clawlite.ai>
 

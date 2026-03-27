@@ -5,7 +5,7 @@
 - **Name**: ClawLite
 - **Tagline**: Install OpenClaw AI agent with one click
 - **Website**: https://clawlite.ai
-- **GitHub**: https://github.com/X-RayLuan/ClawLite-Installer
+- **GitHub**: https://github.com/X-RayLuan/ClawLite-Brand-Installer
 
 ## Description (Short)
 

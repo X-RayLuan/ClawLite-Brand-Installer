@@ -97,7 +97,7 @@ On Windows, Node.js and the agent run inside WSL (Windows Subsystem for Linux) U
 
 ### Release Distribution
 
-Source code and binaries are managed in the `X-RayLuan/ClawLite-Installer` single repository.
+Source code and binaries are managed in the `X-RayLuan/ClawLite-Brand-Installer` single repository.
 
 **Release process** (`npm run release` = `scripts/release.mjs`):
 
@@ -117,8 +117,8 @@ Source code and binaries are managed in the `X-RayLuan/ClawLite-Installer` singl
 
 **Download URLs** (version-independent, always latest):
 
-- macOS: `https://github.com/X-RayLuan/ClawLite-Installer/releases/latest/download/clawlite.dmg`
-- Windows: `https://github.com/X-RayLuan/ClawLite-Installer/releases/latest/download/clawlite-setup.exe`
+- macOS: `https://github.com/X-RayLuan/ClawLite-Brand-Installer/releases/latest/download/clawlite.dmg`
+- Windows: `https://github.com/X-RayLuan/ClawLite-Brand-Installer/releases/latest/download/clawlite-setup.exe`
 
 **Build filenames**: Fixed without version in `electron-builder.yml` (`clawlite.dmg`, `clawlite-setup.exe`)
 

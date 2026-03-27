@@ -61,6 +61,6 @@ dmg:
 publish:
   provider: github
   owner: X-RayLuan
-  repo: ClawLite-Installer
+  repo: ClawLite-Brand-Installer
   releaseType: release
 npmRebuild: false
