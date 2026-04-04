@@ -5,6 +5,7 @@ export type StepName =
   | 'envCheck'
   | 'wslSetup'
   | 'install'
+  | 'activation'
   | 'apiKeyGuide'
   | 'telegramGuide'
   | 'config'
@@ -16,6 +17,7 @@ const STEPS: StepName[] = [
   'envCheck',
   'wslSetup',
   'install',
+  'activation',
   'apiKeyGuide',
   'telegramGuide',
   'config',

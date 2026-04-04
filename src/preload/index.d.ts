@@ -1,3 +1,12 @@
+import type {
+  ActivationBootstrapInput,
+  ActivationConfigInjectionInput,
+  ActivationFlowSnapshot,
+  ActivationProvisionInput,
+  ActivationPurchaseInput,
+  ActivationValidationInput
+} from '../shared/activation/types'
+
 type WslState =
   | 'not_available'
   | 'not_installed'
@@ -25,6 +34,16 @@ interface ElectronAPI {
       openclawLatestVersion: string | null
       wslState?: WslState
     }>
+  }
+  activation: {
+    bootstrap: (input: ActivationBootstrapInput) => Promise<ActivationFlowSnapshot>
+    getState: () => Promise<ActivationFlowSnapshot | null>
+    startPurchase: (input: ActivationPurchaseInput) => Promise<ActivationFlowSnapshot>
+    confirmPurchase: () => Promise<ActivationFlowSnapshot>
+    provision: (input: ActivationProvisionInput) => Promise<ActivationFlowSnapshot>
+    injectConfig: (input: ActivationConfigInjectionInput) => Promise<ActivationFlowSnapshot>
+    validate: (input: ActivationValidationInput) => Promise<ActivationFlowSnapshot>
+    useOwnKey: () => Promise<ActivationFlowSnapshot>
   }
   install: {
     node: () => Promise<{ success: boolean; error?: string }>
@@ -81,7 +100,12 @@ interface ElectronAPI {
   config: {
     read: () => Promise<{
       success: boolean
-      config: { provider?: string; model?: string; hasTelegram?: boolean; gatewayToken?: string } | null
+      config: {
+        provider?: string
+        model?: string
+        hasTelegram?: boolean
+        gatewayToken?: string
+      } | null
       error?: string
     }>
     switchProvider: (config: {

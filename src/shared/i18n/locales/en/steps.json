@@ -1,7 +1,17 @@
 {
   "indicator": {
-    "default": ["Start", "Env", "Install", "API Key", "Telegram", "Config", "Done"],
-    "windows": ["Start", "Env", "WSL", "Install", "API Key", "Telegram", "Config", "Done"]
+    "default": ["Start", "Env", "Install", "Activate", "API Key", "Telegram", "Config", "Done"],
+    "windows": [
+      "Start",
+      "Env",
+      "WSL",
+      "Install",
+      "Activate",
+      "API Key",
+      "Telegram",
+      "Config",
+      "Done"
+    ]
   },
   "welcome": {
     "title": "Your Own AI Agent, One Click Away",
@@ -72,6 +82,47 @@
     "retryBtn": "Retry",
     "startBtn": "Start Installation",
     "nextBtn": "Next Step"
+  },
+  "activation": {
+    "title": "Activate ClawRouter",
+    "desc": "Bind this installer to your ClawLite account, buy if needed, and auto-configure OpenClaw without exposing a raw key.",
+    "statusLabel": "Activation Status",
+    "loading": "Resolving your installer session...",
+    "refresh": "Refresh",
+    "recommended": "Recommended",
+    "accountBound": "Installer session is bound to {{emailMasked}}",
+    "phase": {
+      "session_binding_pending": "Resolving download session",
+      "ready_for_activation": "Ready to activate",
+      "purchase_pending": "Waiting for purchase confirmation",
+      "provisioning": "Binding ClawRouter credential",
+      "config_injection": "Preparing OpenClaw config patch",
+      "validation": "Testing ClawRouter connection",
+      "completed": "ClawRouter connected",
+      "skipped_to_byok": "Continuing with your own API key",
+      "manual_path_only": "Account binding unavailable, BYOK only",
+      "error": "Activation needs attention"
+    },
+    "paths": {
+      "connectTitle": "Already purchased",
+      "connectDesc": "If your ClawLite account already has ClawRouter access, connect and configure OpenClaw now.",
+      "connectCta": "Connect ClawRouter",
+      "buyTitle": "Buy and auto-configure",
+      "buyDesc": "Start activation, complete purchase, then let the installer bind and inject the credential automatically.",
+      "buyCta": "Activate ClawRouter",
+      "ownKeyTitle": "Use my own API key",
+      "ownKeyDesc": "Skip ClawRouter and continue with the existing BYOK setup flow.",
+      "ownKeyCta": "Use My Own API Key"
+    },
+    "summary": {
+      "title": "Provisioning Summary",
+      "binding": "Credential reference: {{credentialRef}}",
+      "target": "Config target: {{configTarget}}"
+    },
+    "errors": {
+      "bootstrap": "Failed to resolve the installer session.",
+      "generic": "Activation failed. Please retry or continue with your own API key."
+    }
   },
   "apiKeyGuide": {
     "title": "Choose AI Provider",

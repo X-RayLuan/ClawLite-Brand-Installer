@@ -1,4 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type {
+  ActivationBootstrapInput,
+  ActivationConfigInjectionInput,
+  ActivationFlowSnapshot,
+  ActivationProvisionInput,
+  ActivationPurchaseInput,
+  ActivationValidationInput
+} from '../shared/activation/types'
 
 const electronAPI = {
   version: (): Promise<string> => ipcRenderer.invoke('app:version'),
@@ -19,6 +27,23 @@ const electronAPI = {
         | 'not_initialized'
         | 'ready'
     }> => ipcRenderer.invoke('env:check')
+  },
+  activation: {
+    bootstrap: (input: ActivationBootstrapInput): Promise<ActivationFlowSnapshot> =>
+      ipcRenderer.invoke('activation:bootstrap', input),
+    getState: (): Promise<ActivationFlowSnapshot | null> =>
+      ipcRenderer.invoke('activation:get-state'),
+    startPurchase: (input: ActivationPurchaseInput): Promise<ActivationFlowSnapshot> =>
+      ipcRenderer.invoke('activation:start-purchase', input),
+    confirmPurchase: (): Promise<ActivationFlowSnapshot> =>
+      ipcRenderer.invoke('activation:confirm-purchase'),
+    provision: (input: ActivationProvisionInput): Promise<ActivationFlowSnapshot> =>
+      ipcRenderer.invoke('activation:provision', input),
+    injectConfig: (input: ActivationConfigInjectionInput): Promise<ActivationFlowSnapshot> =>
+      ipcRenderer.invoke('activation:inject-config', input),
+    validate: (input: ActivationValidationInput): Promise<ActivationFlowSnapshot> =>
+      ipcRenderer.invoke('activation:validate', input),
+    useOwnKey: (): Promise<ActivationFlowSnapshot> => ipcRenderer.invoke('activation:use-own-key')
   },
   install: {
     node: (): Promise<{ success: boolean; error?: string }> => ipcRenderer.invoke('install:node'),
@@ -124,7 +149,12 @@ const electronAPI = {
   config: {
     read: (): Promise<{
       success: boolean
-      config: { provider?: string; model?: string; hasTelegram?: boolean; gatewayToken?: string } | null
+      config: {
+        provider?: string
+        model?: string
+        hasTelegram?: boolean
+        gatewayToken?: string
+      } | null
       error?: string
     }> => ipcRenderer.invoke('config:read'),
     switchProvider: (config: {

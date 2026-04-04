@@ -27,6 +27,7 @@ import { checkForUpdates, downloadUpdate, installUpdate } from './services/updat
 import { uninstallOpenClaw } from './services/uninstaller'
 import { exportBackup, importBackup } from './services/backup'
 import { loginOpenAICodex } from './services/oauth'
+import { activationController } from './services/activation-controller'
 
 interface WizardPersistedState {
   step: string
@@ -76,6 +77,18 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
 
   ipcMain.handle('env:check', () => checkEnvironment())
   ipcMain.handle('openclaw:check-update', () => checkOpenclawUpdate())
+  ipcMain.handle('activation:bootstrap', (_e, input) => activationController.bootstrap(input))
+  ipcMain.handle('activation:get-state', () => activationController.getState())
+  ipcMain.handle('activation:start-purchase', (_e, input) =>
+    activationController.startPurchase(input)
+  )
+  ipcMain.handle('activation:confirm-purchase', () => activationController.confirmPurchase())
+  ipcMain.handle('activation:provision', (_e, input) => activationController.provision(input))
+  ipcMain.handle('activation:inject-config', (_e, input) =>
+    activationController.injectConfig(input)
+  )
+  ipcMain.handle('activation:validate', (_e, input) => activationController.validate(input))
+  ipcMain.handle('activation:use-own-key', () => activationController.useOwnKey())
 
   // WSL-related IPC
   ipcMain.handle('wsl:check', () => checkWslState())

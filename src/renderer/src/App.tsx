@@ -7,6 +7,7 @@ import WelcomeStep from './steps/WelcomeStep'
 import EnvCheckStep from './steps/EnvCheckStep'
 import WslSetupStep from './steps/WslSetupStep'
 import InstallStep from './steps/InstallStep'
+import ActivationStep from './steps/ActivationStep'
 import ApiKeyGuideStep from './steps/ApiKeyGuideStep'
 import TelegramGuideStep from './steps/TelegramGuideStep'
 import ConfigStep from './steps/ConfigStep'
@@ -146,7 +147,15 @@ function App(): React.JSX.Element {
             <WslSetupStep wslState={wslState} onReady={handleWslReady} />
           )}
           {currentStep === 'install' && (
-            <InstallStep needs={installNeeds} onDone={() => goTo('apiKeyGuide')} />
+            <InstallStep needs={installNeeds} onDone={() => goTo('activation')} />
+          )}
+          {currentStep === 'activation' && (
+            <ActivationStep
+              appVersion={version || '0.0.0'}
+              platform={isWindows ? 'windows' : 'macos'}
+              onUseOwnKey={() => goTo('apiKeyGuide')}
+              onActivationComplete={() => goTo('done')}
+            />
           )}
           {currentStep === 'apiKeyGuide' && (
             <ApiKeyGuideStep
