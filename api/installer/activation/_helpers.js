@@ -63,7 +63,7 @@ export async function putActivationState(setupToken, data) {
   }
   await put(blobKey(setupToken), JSON.stringify(data), {
     contentType: 'application/json',
-    access: 'private',
+    access: 'public',
     addRandomSuffix: false,
     allowOverwrite: true,
     cacheControlMaxAge: 0
