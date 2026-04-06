@@ -2,6 +2,8 @@ export type ActivationPlatform = 'macos' | 'windows' | 'linux' | 'unknown'
 
 export type ActivationPath = 'connect_existing_purchase' | 'buy_and_connect' | 'use_own_key'
 
+export type ActivationBackendMode = 'mock' | 'remote'
+
 export type ActivationPhase =
   | 'session_binding_pending'
   | 'ready_for_activation'
@@ -19,10 +21,21 @@ export type PurchaseStatus = 'not_started' | 'checkout_pending' | 'completed' | 
 export type ProvisioningStatus = 'idle' | 'binding' | 'bound' | 'failed'
 export type ConfigInjectionStatus = 'idle' | 'writing' | 'written' | 'failed'
 export type ValidationStatus = 'idle' | 'testing' | 'passed' | 'failed'
+export type ResaleStatus = 'idle' | 'submitted' | 'failed'
 
 export interface ActivationAccount {
   accountId: string
   emailMasked: string
+}
+
+export interface ActivationOffer {
+  id: string
+  title: string
+  summary: string
+  priceLabel: string
+  settlementLabel: string
+  deliveryEstimate: string
+  tag: 'official' | 'resale'
 }
 
 export interface InstallerSessionBinding {
@@ -69,17 +82,31 @@ export interface ValidationState {
   latencyMs?: number
 }
 
+export interface ResaleState {
+  status: ResaleStatus
+  intakeId?: string
+  sellerEmail?: string
+  seats?: number
+  note?: string
+  submittedAt?: string
+  nextStepLabel?: string
+  reviewUrl?: string
+}
+
 export interface ActivationFlowSnapshot {
   flowVersion: '2026-04-03'
+  backendMode: ActivationBackendMode
   phase: ActivationPhase
   selectedPath?: ActivationPath
   recommendedPath: ActivationPath
   allowedPaths: ActivationPath[]
+  offers: ActivationOffer[]
   binding: InstallerSessionBinding
   purchase: PurchaseState
   provisioning: ProvisioningState
   configInjection: ConfigInjectionState
   validation: ValidationState
+  resale: ResaleState
   constraints: string[]
   nextActionLabel: string
   errorMessage?: string
@@ -106,4 +133,10 @@ export interface ActivationConfigInjectionInput {
 
 export interface ActivationValidationInput {
   expectGatewayReachable?: boolean
+}
+
+export interface ActivationResaleInput {
+  sellerEmail: string
+  seats: number
+  note?: string
 }

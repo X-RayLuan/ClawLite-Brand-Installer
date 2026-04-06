@@ -5,6 +5,7 @@ import type {
   ActivationFlowSnapshot,
   ActivationProvisionInput,
   ActivationPurchaseInput,
+  ActivationResaleInput,
   ActivationValidationInput
 } from '../shared/activation/types'
 
@@ -43,6 +44,8 @@ const electronAPI = {
       ipcRenderer.invoke('activation:inject-config', input),
     validate: (input: ActivationValidationInput): Promise<ActivationFlowSnapshot> =>
       ipcRenderer.invoke('activation:validate', input),
+    submitResale: (input: ActivationResaleInput): Promise<ActivationFlowSnapshot> =>
+      ipcRenderer.invoke('activation:submit-resale', input),
     useOwnKey: (): Promise<ActivationFlowSnapshot> => ipcRenderer.invoke('activation:use-own-key')
   },
   install: {

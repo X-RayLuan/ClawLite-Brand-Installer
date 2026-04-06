@@ -33,7 +33,11 @@ export default function ActivationStep({
   const [snapshot, setSnapshot] = useState<ActivationFlowSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState(false)
+  const [resaleWorking, setResaleWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [resaleEmail, setResaleEmail] = useState('')
+  const [resaleSeats, setResaleSeats] = useState('1')
+  const [resaleNote, setResaleNote] = useState('')
 
   const refresh = useCallback(async (): Promise<void> => {
     setLoading(true)
@@ -56,19 +60,9 @@ export default function ActivationStep({
     void refresh()
   }, [refresh])
 
-  const runConnectFlow = async (
-    mode: 'connect_existing_purchase' | 'buy_and_connect'
-  ): Promise<void> => {
-    setWorking(true)
-    setError(null)
-    try {
-      let next = await window.electronAPI.activation.startPurchase({ path: mode })
-      setSnapshot(next)
-
-      if (mode === 'buy_and_connect') {
-        next = await window.electronAPI.activation.confirmPurchase()
-        setSnapshot(next)
-      }
+  const runProvisioningChain = useCallback(
+    async (current: ActivationFlowSnapshot): Promise<void> => {
+      let next = current
 
       next = await window.electronAPI.activation.provision({ deviceLabel: 'ClawLite Installer' })
       setSnapshot(next)
@@ -84,6 +78,58 @@ export default function ActivationStep({
 
       if (next.phase === 'completed') {
         onActivationComplete()
+      }
+    },
+    [onActivationComplete, platform]
+  )
+
+  const handleConnectExisting = async (): Promise<void> => {
+    setWorking(true)
+    setError(null)
+    try {
+      const next = await window.electronAPI.activation.startPurchase({
+        path: 'connect_existing_purchase'
+      })
+      setSnapshot(next)
+      if (next.phase === 'provisioning') {
+        await runProvisioningChain(next)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('activation.errors.generic'))
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  const handleStartBuy = async (): Promise<void> => {
+    setWorking(true)
+    setError(null)
+    try {
+      const next = await window.electronAPI.activation.startPurchase({ path: 'buy_and_connect' })
+      setSnapshot(next)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('activation.errors.generic'))
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  const handleOpenCheckout = async (): Promise<void> => {
+    if (!snapshot?.purchase.checkoutUrl) return
+    const result = await window.electronAPI.system.openExternal(snapshot.purchase.checkoutUrl)
+    if (!result.success) {
+      setError(result.error ?? 'Failed to open checkout URL.')
+    }
+  }
+
+  const handleConfirmBuy = async (): Promise<void> => {
+    setWorking(true)
+    setError(null)
+    try {
+      const next = await window.electronAPI.activation.confirmPurchase()
+      setSnapshot(next)
+      if (next.phase === 'provisioning') {
+        await runProvisioningChain(next)
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('activation.errors.generic'))
@@ -106,16 +152,59 @@ export default function ActivationStep({
     }
   }
 
+  const handleResaleSubmit = async (): Promise<void> => {
+    const seats = Number.parseInt(resaleSeats, 10)
+    if (!resaleEmail.trim() || !Number.isFinite(seats) || seats < 1) {
+      setError('Enter a seller email and at least one seat for resale intake.')
+      return
+    }
+
+    setResaleWorking(true)
+    setError(null)
+    try {
+      const next = await window.electronAPI.activation.submitResale({
+        sellerEmail: resaleEmail.trim(),
+        seats,
+        note: resaleNote.trim() || undefined
+      })
+      setSnapshot(next)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('activation.errors.generic'))
+    } finally {
+      setResaleWorking(false)
+    }
+  }
+
   const phaseKey = snapshot?.phase ? `activation.phase.${snapshot.phase}` : null
   const canConnectExisting = snapshot?.allowedPaths.includes('connect_existing_purchase') ?? false
   const canBuyAndConnect = snapshot?.allowedPaths.includes('buy_and_connect') ?? false
+  const backendMode = snapshot?.backendMode ?? 'mock'
+  const checkoutPending = snapshot?.phase === 'purchase_pending'
+  const resaleSubmitted = snapshot?.resale.status === 'submitted'
 
   return (
     <div className="flex-1 flex flex-col min-h-0 px-8 pt-6">
       <div className="flex-1 overflow-y-auto pb-2 space-y-4">
         <div className="space-y-1">
-          <h2 className="text-lg font-extrabold">{t('activation.title')}</h2>
-          <p className="text-text-muted text-xs">{t('activation.desc')}</p>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-extrabold">{t('activation.title')}</h2>
+              <p className="text-text-muted text-xs">{t('activation.desc')}</p>
+            </div>
+            <span
+              className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${
+                backendMode === 'mock'
+                  ? 'bg-warning/15 text-warning'
+                  : 'bg-success/15 text-success'
+              }`}
+            >
+              {backendMode === 'mock' ? 'Mock Settlement' : 'Remote API'}
+            </span>
+          </div>
+          <p className="text-[11px] text-text-muted/70">
+            Purchase flow, config injection, and validation run locally end-to-end. Payment capture and
+            resale transfer stay clearly marked as mock unless a remote activation API is configured.
+          </p>
         </div>
 
         <div className="rounded-2xl border border-glass-border bg-white/5 p-4 space-y-2">
@@ -150,6 +239,34 @@ export default function ActivationStep({
           ) : null}
         </div>
 
+        {snapshot?.offers?.length ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            {snapshot.offers.map((offer) => (
+              <div
+                key={offer.id}
+                className={`rounded-2xl border p-4 space-y-2 ${
+                  offer.tag === 'official'
+                    ? 'border-primary/30 bg-primary/10'
+                    : 'border-warning/30 bg-warning/10'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-bold">{offer.title}</p>
+                  <span className="text-[10px] uppercase tracking-[0.18em] text-text-muted/70">
+                    {offer.tag}
+                  </span>
+                </div>
+                <p className="text-xs text-text-muted">{offer.summary}</p>
+                <div className="grid gap-1 text-[11px] text-text-muted/80">
+                  <p>{offer.priceLabel}</p>
+                  <p>{offer.settlementLabel}</p>
+                  <p>{offer.deliveryEstimate}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
         <div className="grid gap-3">
           <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 space-y-2">
             <div className="flex items-center justify-between gap-3">
@@ -165,7 +282,7 @@ export default function ActivationStep({
             </div>
             <Button
               size="sm"
-              onClick={() => void runConnectFlow('connect_existing_purchase')}
+              onClick={() => void handleConnectExisting()}
               disabled={!canConnectExisting || working || loading}
               loading={working}
             >
@@ -173,7 +290,7 @@ export default function ActivationStep({
             </Button>
           </div>
 
-          <div className="rounded-2xl border border-glass-border bg-white/5 p-4 space-y-2">
+          <div className="rounded-2xl border border-glass-border bg-white/5 p-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-bold">{t('activation.paths.buyTitle')}</p>
@@ -185,15 +302,109 @@ export default function ActivationStep({
                 </span>
               )}
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => void runConnectFlow('buy_and_connect')}
-              disabled={!canBuyAndConnect || working || loading}
-              loading={working}
-            >
-              {t('activation.paths.buyCta')}
-            </Button>
+
+            {!checkoutPending && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void handleStartBuy()}
+                disabled={!canBuyAndConnect || working || loading}
+                loading={working}
+              >
+                {t('activation.paths.buyCta')}
+              </Button>
+            )}
+
+            {checkoutPending && (
+              <div className="rounded-xl border border-warning/30 bg-warning/10 p-3 space-y-2">
+                <p className="text-xs font-bold text-warning">Checkout staged</p>
+                <p className="text-[11px] text-text-muted/80">
+                  This MVP opens a checkout URL, then waits for explicit confirmation before provisioning the
+                  installer.
+                </p>
+                {snapshot?.purchase.checkoutUrl && (
+                  <p className="text-[11px] font-mono break-all text-text-muted/80">
+                    {snapshot.purchase.checkoutUrl}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" onClick={() => void handleOpenCheckout()} disabled={working}>
+                    Open Checkout
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => void handleConfirmBuy()}
+                    disabled={working}
+                    loading={working}
+                  >
+                    {backendMode === 'mock' ? 'Simulate Payment Complete' : 'I Completed Payment'}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-warning/30 bg-warning/10 p-4 space-y-3">
+            <div>
+              <p className="text-sm font-bold">Resell an unused seat</p>
+              <p className="text-xs text-text-muted">
+                Submit seller details into the installer intake. This MVP records the resale request but does
+                not auto-transfer entitlement yet.
+              </p>
+            </div>
+
+            <div className="grid gap-2 md:grid-cols-2">
+              <input
+                type="email"
+                placeholder="seller@company.com"
+                value={resaleEmail}
+                onChange={(e) => setResaleEmail(e.target.value)}
+                className="w-full bg-bg-input rounded-xl px-4 py-2.5 text-sm outline-none border border-glass-border focus:border-primary"
+              />
+              <input
+                type="number"
+                min="1"
+                value={resaleSeats}
+                onChange={(e) => setResaleSeats(e.target.value)}
+                className="w-full bg-bg-input rounded-xl px-4 py-2.5 text-sm outline-none border border-glass-border focus:border-primary"
+              />
+            </div>
+            <textarea
+              placeholder="Optional note: company offboarding, extra monthly seats, transfer timing..."
+              value={resaleNote}
+              onChange={(e) => setResaleNote(e.target.value)}
+              rows={3}
+              className="w-full bg-bg-input rounded-xl px-4 py-2.5 text-sm outline-none border border-glass-border focus:border-primary resize-none"
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                onClick={() => void handleResaleSubmit()}
+                disabled={resaleWorking}
+                loading={resaleWorking}
+              >
+                Submit Resale Intake
+              </Button>
+              {resaleSubmitted && snapshot?.resale.reviewUrl && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void window.electronAPI.system.openExternal(snapshot.resale.reviewUrl!)}
+                >
+                  Open Review Queue
+                </Button>
+              )}
+            </div>
+
+            {resaleSubmitted && (
+              <div className="rounded-xl border border-success/30 bg-success/10 p-3 space-y-1.5">
+                <p className="text-xs font-bold text-success">Resale intake submitted</p>
+                <p className="text-[11px] text-text-muted/80">
+                  Intake ID: {snapshot?.resale.intakeId} {snapshot?.resale.nextStepLabel ?? ''}
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="rounded-2xl border border-glass-border bg-white/5 p-4 space-y-2">

@@ -4,6 +4,7 @@ import type {
   ActivationFlowSnapshot,
   ActivationProvisionInput,
   ActivationPurchaseInput,
+  ActivationResaleInput,
   ActivationValidationInput
 } from '../shared/activation/types'
 
@@ -43,6 +44,7 @@ interface ElectronAPI {
     provision: (input: ActivationProvisionInput) => Promise<ActivationFlowSnapshot>
     injectConfig: (input: ActivationConfigInjectionInput) => Promise<ActivationFlowSnapshot>
     validate: (input: ActivationValidationInput) => Promise<ActivationFlowSnapshot>
+    submitResale: (input: ActivationResaleInput) => Promise<ActivationFlowSnapshot>
     useOwnKey: () => Promise<ActivationFlowSnapshot>
   }
   install: {
