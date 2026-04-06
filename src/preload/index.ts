@@ -46,7 +46,9 @@ const electronAPI = {
       ipcRenderer.invoke('activation:validate', input),
     submitResale: (input: ActivationResaleInput): Promise<ActivationFlowSnapshot> =>
       ipcRenderer.invoke('activation:submit-resale', input),
-    useOwnKey: (): Promise<ActivationFlowSnapshot> => ipcRenderer.invoke('activation:use-own-key')
+    useOwnKey: (): Promise<ActivationFlowSnapshot> => ipcRenderer.invoke('activation:use-own-key'),
+    restoreConfig: (targetConfigPath: string): Promise<{ restored: boolean; message: string }> =>
+      ipcRenderer.invoke('activation:restore-config', targetConfigPath)
   },
   install: {
     node: (): Promise<{ success: boolean; error?: string }> => ipcRenderer.invoke('install:node'),

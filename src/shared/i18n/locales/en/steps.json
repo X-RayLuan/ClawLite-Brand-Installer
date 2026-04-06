@@ -104,14 +104,14 @@
       "error": "Activation needs attention"
     },
     "paths": {
-      "connectTitle": "Already purchased",
-      "connectDesc": "If your ClawLite account already has ClawRouter access, connect and configure OpenClaw now.",
-      "connectCta": "Connect ClawRouter",
-      "buyTitle": "Buy and auto-configure",
-      "buyDesc": "Start activation, complete purchase, then let the installer bind and inject the credential automatically.",
-      "buyCta": "Activate ClawRouter",
-      "ownKeyTitle": "Use my own API key",
-      "ownKeyDesc": "Skip ClawRouter and continue with the existing BYOK setup flow.",
+      "connectTitle": "Already Purchased",
+      "connectDesc": "If you already own ClawRouter/EZRouter, connect it now.",
+      "connectCta": "Already Purchased",
+      "buyTitle": "Buy ClawRouter with Discount",
+      "buyDesc": "Use a discounted ClawRouter checkout to get started quickly.",
+      "buyCta": "Buy ClawRouter with Discount",
+      "ownKeyTitle": "Use My Own API Key",
+      "ownKeyDesc": "Continue with your own key and skip ClawRouter binding.",
       "ownKeyCta": "Use My Own API Key"
     },
     "summary": {

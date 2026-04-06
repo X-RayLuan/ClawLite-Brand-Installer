@@ -141,7 +141,7 @@ function App(): React.JSX.Element {
         <div className="flex-1 flex flex-col min-h-0 pb-10 step-enter" key={currentStep}>
           {currentStep === 'welcome' && <WelcomeStep onNext={next} />}
           {currentStep === 'envCheck' && (
-            <EnvCheckStep onNext={() => goTo('apiKeyGuide')} onNeedInstall={handleEnvCheckDone} />
+            <EnvCheckStep onNext={() => goTo('activation')} onNeedInstall={handleEnvCheckDone} />
           )}
           {currentStep === 'wslSetup' && (
             <WslSetupStep wslState={wslState} onReady={handleWslReady} />

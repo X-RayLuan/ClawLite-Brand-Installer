@@ -1,3 +1,6 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { homedir } from 'os'
+import { join } from 'path'
 import type {
   ActivationBackendMode,
   ActivationBootstrapInput,
@@ -480,7 +483,55 @@ export class ActivationController {
       return cloneSnapshot(snapshot)
     }
 
+    const writeConfigToDisk = (
+      targetPath: string,
+      patchProvider: string,
+      patchCredentialRef: string,
+      patchModel: string
+    ): void => {
+      const resolved = targetPath.replace(/^~/, homedir())
+      const dir = join(resolved, '..')
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+
+      // Auto-backup before modifying
+      if (existsSync(resolved)) {
+        const backupPath = `${resolved}.pre-activation.bak`
+        if (!existsSync(backupPath)) {
+          writeFileSync(backupPath, readFileSync(resolved), { mode: 0o600 })
+        }
+      }
+
+      let ocConfig: Record<string, unknown> = {}
+      if (existsSync(resolved)) {
+        try {
+          ocConfig = JSON.parse(readFileSync(resolved, 'utf-8'))
+        } catch {
+          /* start fresh if corrupt */
+        }
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const cfg = ocConfig as any
+      if (!cfg.models) cfg.models = {}
+      if (!cfg.models.providers) cfg.models.providers = {}
+      cfg.models.providers[patchProvider] = {
+        credentialRef: patchCredentialRef,
+        models: [{ id: patchModel }]
+      }
+      if (!cfg.models.default) cfg.models.default = patchModel
+
+      writeFileSync(resolved, JSON.stringify(ocConfig, null, 2), { mode: 0o600 })
+    }
+
     if (!useRemoteActivation()) {
+      try {
+        writeConfigToDisk(input.targetConfigPath, 'clawrouter', credentialRef, model)
+      } catch (error) {
+        snapshot.phase = 'error'
+        snapshot.configInjection.status = 'failed'
+        snapshot.errorMessage = error instanceof Error ? error.message : 'Failed to write config file.'
+        return cloneSnapshot(snapshot)
+      }
       snapshot.phase = 'validation'
       snapshot.configInjection = {
         status: 'written',
@@ -509,15 +560,24 @@ export class ActivationController {
         bindingId,
         targetConfigPath: input.targetConfigPath
       })
+
+      const patchPreview = remote.patchPreview ?? { provider: 'clawrouter', credentialRef, model }
+      const configTarget = remote.configTarget ?? input.targetConfigPath
+
+      try {
+        writeConfigToDisk(configTarget, patchPreview.provider, patchPreview.credentialRef, patchPreview.model)
+      } catch (error) {
+        snapshot.phase = 'error'
+        snapshot.configInjection.status = 'failed'
+        snapshot.errorMessage = error instanceof Error ? error.message : 'Failed to write config file.'
+        return cloneSnapshot(snapshot)
+      }
+
       snapshot.phase = 'validation'
       snapshot.configInjection = {
         status: remote.configInjectionState === 'failed' ? 'failed' : 'written',
-        configTarget: remote.configTarget ?? input.targetConfigPath,
-        patchPreview: remote.patchPreview ?? {
-          provider: 'clawrouter',
-          credentialRef,
-          model
-        }
+        configTarget,
+        patchPreview
       }
       snapshot.nextActionLabel = 'Validate Connection'
       snapshot.errorMessage = undefined
@@ -635,6 +695,18 @@ export class ActivationController {
       snapshot.errorMessage = error instanceof Error ? error.message : 'Resale intake failed.'
       return cloneSnapshot(snapshot)
     }
+  }
+
+  restoreConfig(targetConfigPath: string): { restored: boolean; message: string } {
+    const resolved = targetConfigPath.replace(/^~/, homedir())
+    const backupPath = `${resolved}.pre-activation.bak`
+
+    if (!existsSync(backupPath)) {
+      return { restored: false, message: 'No backup found.' }
+    }
+
+    writeFileSync(resolved, readFileSync(backupPath), { mode: 0o600 })
+    return { restored: true, message: `Restored from ${backupPath}` }
   }
 
   private requireSnapshot(): ActivationFlowSnapshot {

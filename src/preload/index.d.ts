@@ -46,6 +46,7 @@ interface ElectronAPI {
     validate: (input: ActivationValidationInput) => Promise<ActivationFlowSnapshot>
     submitResale: (input: ActivationResaleInput) => Promise<ActivationFlowSnapshot>
     useOwnKey: () => Promise<ActivationFlowSnapshot>
+    restoreConfig: (targetConfigPath: string) => Promise<{ restored: boolean; message: string }>
   }
   install: {
     node: () => Promise<{ success: boolean; error?: string }>

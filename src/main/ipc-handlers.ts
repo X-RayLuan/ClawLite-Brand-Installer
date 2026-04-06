@@ -92,6 +92,9 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
     activationController.submitResale(input)
   )
   ipcMain.handle('activation:use-own-key', () => activationController.useOwnKey())
+  ipcMain.handle('activation:restore-config', (_e, targetConfigPath: string) =>
+    activationController.restoreConfig(targetConfigPath)
+  )
 
   // WSL-related IPC
   ipcMain.handle('wsl:check', () => checkWslState())

@@ -33,11 +33,7 @@ export default function ActivationStep({
   const [snapshot, setSnapshot] = useState<ActivationFlowSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState(false)
-  const [resaleWorking, setResaleWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [resaleEmail, setResaleEmail] = useState('')
-  const [resaleSeats, setResaleSeats] = useState('1')
-  const [resaleNote, setResaleNote] = useState('')
 
   const refresh = useCallback(async (): Promise<void> => {
     setLoading(true)
@@ -152,35 +148,11 @@ export default function ActivationStep({
     }
   }
 
-  const handleResaleSubmit = async (): Promise<void> => {
-    const seats = Number.parseInt(resaleSeats, 10)
-    if (!resaleEmail.trim() || !Number.isFinite(seats) || seats < 1) {
-      setError('Enter a seller email and at least one seat for resale intake.')
-      return
-    }
-
-    setResaleWorking(true)
-    setError(null)
-    try {
-      const next = await window.electronAPI.activation.submitResale({
-        sellerEmail: resaleEmail.trim(),
-        seats,
-        note: resaleNote.trim() || undefined
-      })
-      setSnapshot(next)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('activation.errors.generic'))
-    } finally {
-      setResaleWorking(false)
-    }
-  }
-
   const phaseKey = snapshot?.phase ? `activation.phase.${snapshot.phase}` : null
   const canConnectExisting = snapshot?.allowedPaths.includes('connect_existing_purchase') ?? false
   const canBuyAndConnect = snapshot?.allowedPaths.includes('buy_and_connect') ?? false
   const backendMode = snapshot?.backendMode ?? 'mock'
   const checkoutPending = snapshot?.phase === 'purchase_pending'
-  const resaleSubmitted = snapshot?.resale.status === 'submitted'
 
   return (
     <div className="flex-1 flex flex-col min-h-0 px-8 pt-6">
@@ -202,8 +174,8 @@ export default function ActivationStep({
             </span>
           </div>
           <p className="text-[11px] text-text-muted/70">
-            Purchase flow, config injection, and validation run locally end-to-end. Payment capture and
-            resale transfer stay clearly marked as mock unless a remote activation API is configured.
+            Purchase flow, config injection, and validation run locally end-to-end. Payment capture is
+            mocked unless a remote activation API is configured.
           </p>
         </div>
 
@@ -341,68 +313,6 @@ export default function ActivationStep({
                     {backendMode === 'mock' ? 'Simulate Payment Complete' : 'I Completed Payment'}
                   </Button>
                 </div>
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-2xl border border-warning/30 bg-warning/10 p-4 space-y-3">
-            <div>
-              <p className="text-sm font-bold">Resell an unused seat</p>
-              <p className="text-xs text-text-muted">
-                Submit seller details into the installer intake. This MVP records the resale request but does
-                not auto-transfer entitlement yet.
-              </p>
-            </div>
-
-            <div className="grid gap-2 md:grid-cols-2">
-              <input
-                type="email"
-                placeholder="seller@company.com"
-                value={resaleEmail}
-                onChange={(e) => setResaleEmail(e.target.value)}
-                className="w-full bg-bg-input rounded-xl px-4 py-2.5 text-sm outline-none border border-glass-border focus:border-primary"
-              />
-              <input
-                type="number"
-                min="1"
-                value={resaleSeats}
-                onChange={(e) => setResaleSeats(e.target.value)}
-                className="w-full bg-bg-input rounded-xl px-4 py-2.5 text-sm outline-none border border-glass-border focus:border-primary"
-              />
-            </div>
-            <textarea
-              placeholder="Optional note: company offboarding, extra monthly seats, transfer timing..."
-              value={resaleNote}
-              onChange={(e) => setResaleNote(e.target.value)}
-              rows={3}
-              className="w-full bg-bg-input rounded-xl px-4 py-2.5 text-sm outline-none border border-glass-border focus:border-primary resize-none"
-            />
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                onClick={() => void handleResaleSubmit()}
-                disabled={resaleWorking}
-                loading={resaleWorking}
-              >
-                Submit Resale Intake
-              </Button>
-              {resaleSubmitted && snapshot?.resale.reviewUrl && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => void window.electronAPI.system.openExternal(snapshot.resale.reviewUrl!)}
-                >
-                  Open Review Queue
-                </Button>
-              )}
-            </div>
-
-            {resaleSubmitted && (
-              <div className="rounded-xl border border-success/30 bg-success/10 p-3 space-y-1.5">
-                <p className="text-xs font-bold text-success">Resale intake submitted</p>
-                <p className="text-[11px] text-text-muted/80">
-                  Intake ID: {snapshot?.resale.intakeId} {snapshot?.resale.nextStepLabel ?? ''}
-                </p>
               </div>
             )}
           </div>

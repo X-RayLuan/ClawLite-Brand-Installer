@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
   return res.status(200).json({
     purchaseState: 'checkout_pending',
-    checkoutUrl: `https://clawlite.ai/checkout/${purchaseToken}`,
+    checkoutUrl: `https://clawlite.ai/clawrouter/dashboard/add-credits`,
     pollAfterMs: 2500
   })
 }
