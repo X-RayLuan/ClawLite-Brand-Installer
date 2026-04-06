@@ -35,6 +35,7 @@ export default async function handler(req, res) {
     await putActivationState(setupToken, state)
   } catch (e) {
     console.error('Bootstrap state persist error:', e)
+    return res.status(503).json({ error: 'Activation state store unavailable' })
   }
 
   return res.status(200).json({
