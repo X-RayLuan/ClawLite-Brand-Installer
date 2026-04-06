@@ -1,4 +1,4 @@
-import { withCors, getActivationState, putActivationState } from './_helpers.js'
+import { withCors, tokenTimestamp } from './_helpers.js'
 
 const AUTO_COMPLETE_MS = 5000
 
@@ -13,26 +13,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'setupToken query param is required' })
   }
 
-  const state = await getActivationState(setupToken)
-  if (!state) {
-    return res.status(404).json({ error: 'Setup token not found' })
+  const createdAt = tokenTimestamp(setupToken)
+  if (createdAt && Date.now() - createdAt > AUTO_COMPLETE_MS) {
+    return res.status(200).json({ purchaseState: 'completed' })
   }
 
-  if (
-    state.purchaseState === 'checkout_pending' &&
-    state.purchaseStartedAt &&
-    Date.now() - new Date(state.purchaseStartedAt).getTime() > AUTO_COMPLETE_MS
-  ) {
-    state.purchaseState = 'completed'
-    state.entitlementStatus = 'active'
-    try {
-      await putActivationState(setupToken, state)
-    } catch (e) {
-      console.error('Purchase-state auto-complete persist error:', e)
-    }
-  }
-
-  return res.status(200).json({
-    purchaseState: state.purchaseState || 'not_started'
-  })
+  return res.status(200).json({ purchaseState: 'checkout_pending' })
 }

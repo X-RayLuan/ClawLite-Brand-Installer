@@ -1,11 +1,4 @@
-import { list, put } from '@vercel/blob'
-
 const ALLOWED_ORIGINS = ['https://clawlite.ai', 'https://www.clawlite.ai']
-const fallbackMemoryStore = new Map()
-
-function isFallbackAllowed() {
-  return process.env.NODE_ENV !== 'production'
-}
 
 export function withCors(req, res) {
   const origin = req.headers.origin
@@ -17,55 +10,18 @@ export function withCors(req, res) {
 }
 
 export function generateToken(prefix) {
-  const rand = Math.random().toString(36).slice(2, 14)
-  return `${prefix}_${rand}`
+  const ts = Date.now().toString(36)
+  const rand = Math.random().toString(36).slice(2, 10)
+  return `${prefix}_${ts}_${rand}`
+}
+
+export function tokenTimestamp(token) {
+  const parts = token.split('_')
+  if (parts.length < 2) return null
+  const ts = parseInt(parts[1], 36)
+  return isNaN(ts) ? null : ts
 }
 
 export function nowIso() {
   return new Date().toISOString()
-}
-
-function blobKey(setupToken) {
-  return `activation-state-${setupToken}.json`
-}
-
-export function isActivationStatePersisted() {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN) || isFallbackAllowed()
-}
-
-export async function getActivationState(setupToken) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    if (isFallbackAllowed()) {
-      return fallbackMemoryStore.get(setupToken) || null
-    }
-    console.error('BLOB_READ_WRITE_TOKEN missing; cannot read activation state')
-    return null
-  }
-
-  try {
-    const { blobs } = await list({ prefix: blobKey(setupToken) })
-    if (blobs.length === 0) return null
-    const res = await fetch(blobs[0].downloadUrl)
-    return res.json()
-  } catch (error) {
-    console.error('Failed to read activation state:', error)
-    return null
-  }
-}
-
-export async function putActivationState(setupToken, data) {
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    if (isFallbackAllowed()) {
-      fallbackMemoryStore.set(setupToken, data)
-      return
-    }
-    throw new Error('BLOB_READ_WRITE_TOKEN is required for activation state persistence')
-  }
-  await put(blobKey(setupToken), JSON.stringify(data), {
-    contentType: 'application/json',
-    access: 'public',
-    addRandomSuffix: false,
-    allowOverwrite: true,
-    cacheControlMaxAge: 0
-  })
 }
