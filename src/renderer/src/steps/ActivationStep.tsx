@@ -179,67 +179,8 @@ export default function ActivationStep({
           </p>
         </div>
 
-        <div className="rounded-2xl border border-glass-border bg-white/5 p-4 space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-text-muted/60">
-                {t('activation.statusLabel')}
-              </p>
-              <p
-                className={`text-sm font-bold ${phaseTone[snapshot?.phase ?? 'session_binding_pending']}`}
-              >
-                {loading || !phaseKey ? t('activation.loading') : t(phaseKey)}
-              </p>
-            </div>
-            <Button variant="secondary" size="sm" onClick={() => void refresh()} disabled={working}>
-              {t('activation.refresh')}
-            </Button>
-          </div>
 
-          {snapshot?.binding.account && (
-            <p className="text-xs text-text-muted">
-              {t('activation.accountBound', { emailMasked: snapshot.binding.account.emailMasked })}
-            </p>
-          )}
-
-          {snapshot?.constraints?.length ? (
-            <ul className="space-y-1 text-[11px] text-text-muted/80">
-              {snapshot.constraints.map((constraint) => (
-                <li key={constraint}>• {constraint}</li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-
-        {snapshot?.offers?.length ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            {snapshot.offers.map((offer) => (
-              <div
-                key={offer.id}
-                className={`rounded-2xl border p-4 space-y-2 ${
-                  offer.tag === 'official'
-                    ? 'border-primary/30 bg-primary/10'
-                    : 'border-warning/30 bg-warning/10'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-bold">{offer.title}</p>
-                  <span className="text-[10px] uppercase tracking-[0.18em] text-text-muted/70">
-                    {offer.tag}
-                  </span>
-                </div>
-                <p className="text-xs text-text-muted">{offer.summary}</p>
-                <div className="grid gap-1 text-[11px] text-text-muted/80">
-                  <p>{offer.priceLabel}</p>
-                  <p>{offer.settlementLabel}</p>
-                  <p>{offer.deliveryEstimate}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : null}
-
-        <div className="grid gap-3">
+        <div className="grid gap-3 lg:grid-cols-3">
           <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 space-y-2">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -262,22 +203,19 @@ export default function ActivationStep({
             </Button>
           </div>
 
-          <div className="rounded-2xl border border-glass-border bg-white/5 p-4 space-y-3">
+          <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-bold">{t('activation.paths.buyTitle')}</p>
                 <p className="text-xs text-text-muted">{t('activation.paths.buyDesc')}</p>
               </div>
-              {snapshot?.recommendedPath === 'buy_and_connect' && (
-                <span className="rounded-full bg-primary/20 px-2.5 py-1 text-[10px] font-bold text-primary">
-                  {t('activation.recommended')}
-                </span>
-              )}
+              <span className="rounded-full bg-primary/20 px-2.5 py-1 text-[10px] font-bold text-primary">
+                {t('activation.recommended')}
+              </span>
             </div>
 
             {!checkoutPending && (
               <Button
-                variant="secondary"
                 size="sm"
                 onClick={() => void handleStartBuy()}
                 disabled={!canBuyAndConnect || working || loading}
@@ -310,7 +248,7 @@ export default function ActivationStep({
                     disabled={working}
                     loading={working}
                   >
-                    {backendMode === 'mock' ? 'Simulate Payment Complete' : 'I Completed Payment'}
+                    {backendMode === "mock" ? "Simulate Payment Complete" : "I Completed Payment"}
                   </Button>
                 </div>
               </div>
@@ -331,6 +269,62 @@ export default function ActivationStep({
           </div>
         </div>
 
+        <div className="rounded-2xl border border-glass-border bg-white/5 p-4 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-text-muted/60">
+                {t('activation.statusLabel')}
+              </p>
+              <p
+                className={`text-sm font-bold ${phaseTone[snapshot?.phase ?? 'session_binding_pending']}`}
+              >
+                {loading || !phaseKey ? t('activation.loading') : t(phaseKey)}
+              </p>
+            </div>
+            <Button variant="secondary" size="sm" onClick={() => void refresh()} disabled={working}>
+              {t('activation.refresh')}
+            </Button>
+          </div>
+
+          {snapshot?.binding.account && (
+            <p className="text-xs text-text-muted">
+              {t('activation.accountBound', { emailMasked: snapshot.binding.account.emailMasked })}
+            </p>
+          )}
+
+          {snapshot?.constraints?.length ? (
+            <ul className="space-y-1 text-[11px] text-text-muted/80">
+              {snapshot.constraints.map((constraint) => (
+                <li key={constraint}>• {constraint}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+
+  
+        {snapshot?.offers?.length ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            {snapshot.offers.map((offer) => (
+              <div
+                key={offer.id}
+                className={`rounded-2xl border p-4 space-y-2 ${offer.tag === 'official' ? 'border-primary/30 bg-primary/10' : 'border-warning/30 bg-warning/10'}`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-bold">{offer.title}</p>
+                  <span className="text-[10px] uppercase tracking-[0.18em] text-text-muted/70">
+                    {offer.tag}
+                  </span>
+                </div>
+                <p className="text-xs text-text-muted">{offer.summary}</p>
+                <div className="grid gap-1 text-[11px] text-text-muted/80">
+                  <p>{offer.priceLabel}</p>
+                  <p>{offer.settlementLabel}</p>
+                  <p>{offer.deliveryEstimate}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
         {snapshot?.provisioning.credentialRef && (
           <div className="rounded-2xl border border-success/30 bg-success/10 p-4 space-y-1.5">
             <p className="text-sm font-bold text-success">{t('activation.summary.title')}</p>
