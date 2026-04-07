@@ -48,7 +48,15 @@ const electronAPI = {
       ipcRenderer.invoke('activation:submit-resale', input),
     useOwnKey: (): Promise<ActivationFlowSnapshot> => ipcRenderer.invoke('activation:use-own-key'),
     restoreConfig: (targetConfigPath: string): Promise<{ restored: boolean; message: string }> =>
-      ipcRenderer.invoke('activation:restore-config', targetConfigPath)
+      ipcRenderer.invoke('activation:restore-config', targetConfigPath),
+    injectManualKey: (input: {
+      provider: 'clawrouter' | 'ezrouter'
+      apiKey: string
+      targetConfigPath: string
+    }): Promise<{ success: boolean; message: string }> =>
+      ipcRenderer.invoke('activation:inject-manual-key', input),
+    readInstallEmail: (): Promise<string | null> =>
+      ipcRenderer.invoke('activation:read-install-email')
   },
   install: {
     node: (): Promise<{ success: boolean; error?: string }> => ipcRenderer.invoke('install:node'),

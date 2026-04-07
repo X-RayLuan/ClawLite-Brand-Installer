@@ -79,7 +79,7 @@ const scenarioFromEnv = (): ActivationScenario => {
 
 const activationApiBase = (): string | null => {
   const raw = process.env.CLAWLITE_ACTIVATION_API_BASE?.trim()
-  return raw ? raw.replace(/\/$/, '') : null
+  return raw ? raw.replace(/\/$/, '') : 'https://clawlite.ai'
 }
 
 const activationApiEndpoints = {
@@ -711,6 +711,55 @@ export class ActivationController {
       snapshot.errorMessage = error instanceof Error ? error.message : 'Resale intake failed.'
       return cloneSnapshot(snapshot)
     }
+  }
+
+  injectManualKey(input: {
+    provider: 'clawrouter' | 'ezrouter'
+    apiKey: string
+    targetConfigPath: string
+  }): { success: boolean; message: string } {
+    const resolved = input.targetConfigPath.replace(/^~/, homedir())
+    const dir = join(resolved, '..')
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+
+    if (existsSync(resolved)) {
+      const backupPath = `${resolved}.pre-activation.bak`
+      if (!existsSync(backupPath)) {
+        writeFileSync(backupPath, readFileSync(resolved), { mode: 0o600 })
+      }
+    }
+
+    let ocConfig: Record<string, unknown> = {}
+    if (existsSync(resolved)) {
+      try {
+        ocConfig = JSON.parse(readFileSync(resolved, 'utf-8'))
+      } catch {
+        /* start fresh */
+      }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cfg = ocConfig as any
+    if (!cfg.models) cfg.models = { mode: 'merge', providers: {} }
+    if (!cfg.models.providers) cfg.models.providers = {}
+    cfg.models.providers[input.provider] = {
+      baseUrl: 'https://openrouter.ezsite.ai/api/claude',
+      apiKey: input.apiKey,
+      api: 'anthropic-messages',
+      models: [
+        {
+          id: 'claude-sonnet-4-6',
+          name: `Claude Sonnet 4.6 (${input.provider})`,
+          reasoning: false,
+          input: ['text'],
+          contextWindow: 200000,
+          maxTokens: 64000
+        }
+      ]
+    }
+
+    writeFileSync(resolved, JSON.stringify(ocConfig, null, 2), { mode: 0o600 })
+    return { success: true, message: `Wrote ${input.provider} key to ${resolved}` }
   }
 
   restoreConfig(targetConfigPath: string): { restored: boolean; message: string } {

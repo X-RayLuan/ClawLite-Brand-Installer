@@ -37,7 +37,7 @@ function createWindow(): void {
     autoHideMenuBar: true,
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 16, y: 16 },
-    ...(process.platform === 'linux' ? { icon } : {}),
+    icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -48,6 +48,7 @@ function createWindow(): void {
     if (!startHidden) {
       mainWindow?.show()
       mainWindow?.focus()
+      mainWindow?.webContents.openDevTools({ mode: 'detach' })
     }
   })
 

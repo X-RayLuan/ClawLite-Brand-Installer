@@ -10,19 +10,6 @@ interface Props {
   onActivationComplete: () => void
 }
 
-const phaseTone: Record<string, string> = {
-  session_binding_pending: 'text-text-muted',
-  ready_for_activation: 'text-primary',
-  purchase_pending: 'text-warning',
-  provisioning: 'text-primary',
-  config_injection: 'text-primary',
-  validation: 'text-primary',
-  completed: 'text-success',
-  skipped_to_byok: 'text-text-muted',
-  manual_path_only: 'text-text-muted',
-  error: 'text-error'
-}
-
 export default function ActivationStep({
   appVersion,
   platform,
@@ -34,46 +21,60 @@ export default function ActivationStep({
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [accountIdInput, setAccountIdInput] = useState('')
+  const [email, setEmail] = useState('')
+  const [emailLinked, setEmailLinked] = useState(false)
+  const [manualKeyProvider, setManualKeyProvider] = useState<'clawrouter' | 'ezrouter'>('clawrouter')
+  const [manualKeyInput, setManualKeyInput] = useState('')
 
-  const refresh = useCallback(async (): Promise<void> => {
-    setLoading(true)
-    setError(null)
-    try {
-      const state = await window.electronAPI.activation.bootstrap({
-        installerInstanceId: 'clawlite-installer',
-        platform,
-        appVersion,
-        accountId: accountIdInput || undefined
-      })
-      setSnapshot(state)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('activation.errors.bootstrap'))
-    } finally {
-      setLoading(false)
-    }
-  }, [appVersion, platform, t, accountIdInput])
+  const bootstrap = useCallback(
+    async (accountId: string): Promise<ActivationFlowSnapshot | null> => {
+      setLoading(true)
+      setError(null)
+      try {
+        const state = await window.electronAPI.activation.bootstrap({
+          installerInstanceId: 'clawlite-installer',
+          platform,
+          appVersion,
+          accountId
+        })
+        setSnapshot(state)
+        setEmailLinked(true)
+        return state
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t('activation.errors.bootstrap'))
+        return null
+      } finally {
+        setLoading(false)
+      }
+    },
+    [appVersion, platform, t]
+  )
 
+  // Auto-detect email from macOS quarantine xattr
   useEffect(() => {
-    void refresh()
-  }, [refresh])
+    void window.electronAPI.activation.readInstallEmail().then((detectedEmail) => {
+      if (detectedEmail) {
+        setEmail(detectedEmail)
+        void bootstrap(detectedEmail)
+      } else {
+        setLoading(false)
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const runProvisioningChain = useCallback(
     async (current: ActivationFlowSnapshot): Promise<void> => {
       let next = current
-
       next = await window.electronAPI.activation.provision({ deviceLabel: 'ClawLite Installer' })
       setSnapshot(next)
-
       next = await window.electronAPI.activation.injectConfig({
         targetConfigPath:
           platform === 'windows' ? '/root/.openclaw/openclaw.json' : '~/.openclaw/openclaw.json'
       })
       setSnapshot(next)
-
       next = await window.electronAPI.activation.validate({ expectGatewayReachable: true })
       setSnapshot(next)
-
       if (next.phase === 'completed') {
         onActivationComplete()
       }
@@ -81,30 +82,53 @@ export default function ActivationStep({
     [onActivationComplete, platform]
   )
 
-  const handleConnectExisting = async (): Promise<void> => {
-    setWorking(true)
-    setError(null)
-    try {
-      const next = await window.electronAPI.activation.startPurchase({
-        path: 'connect_existing_purchase'
-      })
-      setSnapshot(next)
-      if (next.phase === 'provisioning') {
-        await runProvisioningChain(next)
+  // Auto-poll purchase-state when checkout is pending
+  useEffect(() => {
+    if (snapshot?.phase !== 'purchase_pending') return
+    const interval = setInterval(async () => {
+      try {
+        const next = await window.electronAPI.activation.confirmPurchase()
+        setSnapshot(next)
+        if (next.phase === 'provisioning') {
+          clearInterval(interval)
+          await runProvisioningChain(next)
+        }
+      } catch {
+        /* keep polling */
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('activation.errors.generic'))
-    } finally {
-      setWorking(false)
-    }
-  }
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [snapshot?.phase, runProvisioningChain])
 
-  const handleStartBuy = async (): Promise<void> => {
+  // --- Buy ClawRouter handlers ---
+
+  const handleBuyClick = async (): Promise<void> => {
     setWorking(true)
     setError(null)
     try {
-      const next = await window.electronAPI.activation.startPurchase({ path: 'buy_and_connect' })
-      setSnapshot(next)
+      // Bootstrap first if not yet linked
+      let snap = snapshot
+      if (!emailLinked && email.trim()) {
+        snap = await bootstrap(email.trim())
+      }
+      if (!snap) {
+        setWorking(false)
+        return
+      }
+
+      // If already active, go straight to provisioning
+      if (snap.purchase.entitlement === 'active') {
+        const next = await window.electronAPI.activation.startPurchase({
+          path: 'connect_existing_purchase'
+        })
+        setSnapshot(next)
+        if (next.phase === 'provisioning') {
+          await runProvisioningChain(next)
+        }
+      } else {
+        const next = await window.electronAPI.activation.startPurchase({ path: 'buy_and_connect' })
+        setSnapshot(next)
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('activation.errors.generic'))
     } finally {
@@ -136,121 +160,80 @@ export default function ActivationStep({
     }
   }
 
-  const handleOwnKey = async (): Promise<void> => {
+  // --- Connect existing key handler ---
+
+  const handleManualKey = async (): Promise<void> => {
+    if (!manualKeyInput.trim()) {
+      setError('API key is required')
+      return
+    }
     setWorking(true)
     setError(null)
     try {
-      const next = await window.electronAPI.activation.useOwnKey()
-      setSnapshot(next)
-      onUseOwnKey()
+      const result = await window.electronAPI.activation.injectManualKey({
+        provider: manualKeyProvider,
+        apiKey: manualKeyInput.trim(),
+        targetConfigPath:
+          platform === 'windows' ? '/root/.openclaw/openclaw.json' : '~/.openclaw/openclaw.json'
+      })
+      if (result.success) {
+        onActivationComplete()
+      } else {
+        setError(result.message)
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('activation.errors.generic'))
+      setError(e instanceof Error ? e.message : 'Failed to write API key')
     } finally {
       setWorking(false)
     }
   }
 
-  const phaseKey = snapshot?.phase ? `activation.phase.${snapshot.phase}` : null
-  const canConnectExisting = snapshot?.allowedPaths.includes('connect_existing_purchase') ?? false
-  const canBuyAndConnect = snapshot?.allowedPaths.includes('buy_and_connect') ?? false
-  const backendMode = snapshot?.backendMode ?? 'mock'
   const checkoutPending = snapshot?.phase === 'purchase_pending'
 
   return (
     <div className="flex-1 flex flex-col min-h-0 px-8 pt-6">
       <div className="flex-1 overflow-y-auto pb-2 space-y-4">
         <div className="space-y-1">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-extrabold">{t('activation.title')}</h2>
-              <p className="text-text-muted text-xs">{t('activation.desc')}</p>
-            </div>
-            <span
-              className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${
-                backendMode === 'mock'
-                  ? 'bg-warning/15 text-warning'
-                  : 'bg-success/15 text-success'
-              }`}
-            >
-              {backendMode === 'mock' ? 'Mock Settlement' : 'Remote API'}
-            </span>
-          </div>
-          <p className="text-[11px] text-text-muted/70">
-            Purchase flow, config injection, and validation run locally end-to-end. Payment capture is
-            mocked unless a remote activation API is configured.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Account ID or email (from clawlite.ai)"
-            value={accountIdInput}
-            onChange={(e) => setAccountIdInput(e.target.value)}
-            className="flex-1 rounded-xl border border-glass-border bg-white/5 px-3 py-2 text-xs text-text placeholder:text-text-muted/50 focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-          <Button size="sm" onClick={() => void refresh()} disabled={loading}>
-            {loading ? 'Checking...' : 'Link Account'}
-          </Button>
+          <h2 className="text-lg font-extrabold">{t('activation.title')}</h2>
+          <p className="text-text-muted text-xs">{t('activation.desc')}</p>
         </div>
 
         <div className="grid gap-3 lg:grid-cols-3">
-          <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 space-y-2">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold">{t('activation.paths.connectTitle')}</p>
-                <p className="text-xs text-text-muted">{t('activation.paths.connectDesc')}</p>
-              </div>
-              {snapshot?.recommendedPath === 'connect_existing_purchase' && (
-                <span className="rounded-full bg-primary/20 px-2.5 py-1 text-[10px] font-bold text-primary">
-                  {t('activation.recommended')}
-                </span>
-              )}
-            </div>
-            <Button
-              size="sm"
-              onClick={() => void handleConnectExisting()}
-              disabled={!canConnectExisting || working || loading}
-              loading={working}
-            >
-              {t('activation.paths.connectCta')}
-            </Button>
-          </div>
-
+          {/* Card 1: Buy ClawRouter */}
           <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold">{t('activation.paths.buyTitle')}</p>
-                <p className="text-xs text-text-muted">{t('activation.paths.buyDesc')}</p>
-              </div>
-              <span className="rounded-full bg-primary/20 px-2.5 py-1 text-[10px] font-bold text-primary">
-                {t('activation.recommended')}
-              </span>
+            <div>
+              <p className="text-sm font-bold">Buy ClawRouter</p>
+              <p className="text-xs text-text-muted">
+                Get a ClawRouter API key with discounted credits. We'll set everything up for you.
+              </p>
             </div>
 
             {!checkoutPending && (
-              <Button
-                size="sm"
-                onClick={() => void handleStartBuy()}
-                disabled={!canBuyAndConnect || working || loading}
-                loading={working}
-              >
-                {t('activation.paths.buyCta')}
-              </Button>
+              <div className="space-y-2">
+                <input
+                  type="email"
+                  placeholder="Your email (from clawlite.ai)"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-xl border border-glass-border bg-white/5 px-3 py-2 text-xs text-text placeholder:text-text-muted/50 focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => void handleBuyClick()}
+                  disabled={!email.trim() || working || loading}
+                  loading={working}
+                >
+                  {loading ? 'Checking...' : 'Buy ClawRouter'}
+                </Button>
+              </div>
             )}
 
             {checkoutPending && (
               <div className="rounded-xl border border-warning/30 bg-warning/10 p-3 space-y-2">
-                <p className="text-xs font-bold text-warning">Checkout staged</p>
+                <p className="text-xs font-bold text-warning">Waiting for payment...</p>
                 <p className="text-[11px] text-text-muted/80">
-                  This MVP opens a checkout URL, then waits for explicit confirmation before provisioning the
-                  installer.
+                  Complete the checkout in your browser. This page will update automatically.
                 </p>
-                {snapshot?.purchase.checkoutUrl && (
-                  <p className="text-[11px] font-mono break-all text-text-muted/80">
-                    {snapshot.purchase.checkoutUrl}
-                  </p>
-                )}
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" onClick={() => void handleOpenCheckout()} disabled={working}>
                     Open Checkout
@@ -262,77 +245,68 @@ export default function ActivationStep({
                     disabled={working}
                     loading={working}
                   >
-                    {backendMode === "mock" ? "Simulate Payment Complete" : "I Completed Payment"}
+                    I Completed Payment
                   </Button>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="rounded-2xl border border-glass-border bg-white/5 p-4 space-y-2">
-            <p className="text-sm font-bold">{t('activation.paths.ownKeyTitle')}</p>
-            <p className="text-xs text-text-muted">{t('activation.paths.ownKeyDesc')}</p>
+          {/* Card 2: Connect to ClawRouter / EZRouter */}
+          <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 space-y-3">
+            <div>
+              <p className="text-sm font-bold">Connect to ClawRouter / EZRouter</p>
+              <p className="text-xs text-text-muted">
+                Already have a ClawRouter or EZRouter API key? Paste it here.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <select
+                value={manualKeyProvider}
+                onChange={(e) =>
+                  setManualKeyProvider(e.target.value as 'clawrouter' | 'ezrouter')
+                }
+                className="w-full rounded-xl border border-glass-border bg-white/5 px-3 py-2 text-xs text-text focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="clawrouter">ClawRouter</option>
+                <option value="ezrouter">EZRouter</option>
+              </select>
+              <input
+                type="text"
+                placeholder="or_xxx... or your API key"
+                value={manualKeyInput}
+                onChange={(e) => setManualKeyInput(e.target.value)}
+                className="w-full rounded-xl border border-glass-border bg-white/5 px-3 py-2 text-xs text-text placeholder:text-text-muted/50 focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <Button
+                size="sm"
+                onClick={() => void handleManualKey()}
+                disabled={!manualKeyInput.trim() || working}
+                loading={working}
+              >
+                Save &amp; Continue
+              </Button>
+            </div>
+          </div>
+
+          {/* Card 3: Bring My Own Key */}
+          <div className="rounded-2xl border border-glass-border bg-white/5 p-4 space-y-3">
+            <div>
+              <p className="text-sm font-bold">Bring My Own Key</p>
+              <p className="text-xs text-text-muted">
+                Use your own API key from OpenAI, Anthropic, or another provider.
+              </p>
+            </div>
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => void handleOwnKey()}
-              disabled={working || loading}
+              onClick={() => void onUseOwnKey()}
+              disabled={working}
             >
-              {t('activation.paths.ownKeyCta')}
+              Configure API Key
             </Button>
           </div>
         </div>
-
-        <div className="rounded-2xl border border-glass-border bg-white/5 p-4 space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-text-muted/60">
-                {t('activation.statusLabel')}
-              </p>
-              <p
-                className={`text-sm font-bold ${phaseTone[snapshot?.phase ?? 'session_binding_pending']}`}
-              >
-                {loading || !phaseKey ? t('activation.loading') : t(phaseKey)}
-              </p>
-            </div>
-            <Button variant="secondary" size="sm" onClick={() => void refresh()} disabled={working}>
-              {t('activation.refresh')}
-            </Button>
-          </div>
-
-          {snapshot?.binding.account && (
-            <p className="text-xs text-text-muted">
-              {t('activation.accountBound', { emailMasked: snapshot.binding.account.emailMasked })}
-            </p>
-          )}
-
-          {snapshot?.constraints?.length ? (
-            <ul className="space-y-1 text-[11px] text-text-muted/80">
-              {snapshot.constraints.map((constraint) => (
-                <li key={constraint}>• {constraint}</li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-
-  
-        {snapshot?.provisioning.credentialRef && (
-          <div className="rounded-2xl border border-success/30 bg-success/10 p-4 space-y-1.5">
-            <p className="text-sm font-bold text-success">{t('activation.summary.title')}</p>
-            <p className="text-xs text-text-muted">
-              {t('activation.summary.binding', {
-                credentialRef: snapshot.provisioning.credentialRef
-              })}
-            </p>
-            {snapshot.configInjection.configTarget && (
-              <p className="text-xs text-text-muted">
-                {t('activation.summary.target', {
-                  configTarget: snapshot.configInjection.configTarget
-                })}
-              </p>
-            )}
-          </div>
-        )}
 
         {error && <p className="text-error text-xs font-medium">{error}</p>}
         {snapshot?.errorMessage && (

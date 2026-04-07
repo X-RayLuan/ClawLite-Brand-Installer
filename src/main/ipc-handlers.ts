@@ -28,6 +28,7 @@ import { uninstallOpenClaw } from './services/uninstaller'
 import { exportBackup, importBackup } from './services/backup'
 import { loginOpenAICodex } from './services/oauth'
 import { activationController } from './services/activation-controller'
+import { readEmailFromInstallSource } from './services/install-source'
 
 interface WizardPersistedState {
   step: string
@@ -94,6 +95,12 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
   ipcMain.handle('activation:use-own-key', () => activationController.useOwnKey())
   ipcMain.handle('activation:restore-config', (_e, targetConfigPath: string) =>
     activationController.restoreConfig(targetConfigPath)
+  )
+  ipcMain.handle('activation:read-install-email', () => readEmailFromInstallSource())
+  ipcMain.handle(
+    'activation:inject-manual-key',
+    (_e, input: { provider: 'clawrouter' | 'ezrouter'; apiKey: string; targetConfigPath: string }) =>
+      activationController.injectManualKey(input)
   )
 
   // WSL-related IPC

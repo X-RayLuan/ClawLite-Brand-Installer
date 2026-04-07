@@ -47,6 +47,12 @@ interface ElectronAPI {
     submitResale: (input: ActivationResaleInput) => Promise<ActivationFlowSnapshot>
     useOwnKey: () => Promise<ActivationFlowSnapshot>
     restoreConfig: (targetConfigPath: string) => Promise<{ restored: boolean; message: string }>
+    injectManualKey: (input: {
+      provider: 'clawrouter' | 'ezrouter'
+      apiKey: string
+      targetConfigPath: string
+    }) => Promise<{ success: boolean; message: string }>
+    readInstallEmail: () => Promise<string | null>
   }
   install: {
     node: () => Promise<{ success: boolean; error?: string }>
