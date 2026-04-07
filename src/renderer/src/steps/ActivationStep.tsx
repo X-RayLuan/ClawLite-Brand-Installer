@@ -22,7 +22,6 @@ export default function ActivationStep({
   const [working, setWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [email, setEmail] = useState('')
-  const [emailLinked, setEmailLinked] = useState(false)
   const [manualKeyProvider, setManualKeyProvider] = useState<'clawrouter' | 'ezrouter'>('clawrouter')
   const [manualKeyInput, setManualKeyInput] = useState('')
 
@@ -38,7 +37,6 @@ export default function ActivationStep({
           accountId
         })
         setSnapshot(state)
-        setEmailLinked(true)
         return state
       } catch (e) {
         setError(e instanceof Error ? e.message : t('activation.errors.bootstrap'))
@@ -68,15 +66,25 @@ export default function ActivationStep({
       let next = current
       next = await window.electronAPI.activation.provision({ deviceLabel: 'ClawLite Installer' })
       setSnapshot(next)
+      if (next.phase === 'error') {
+        setError(next.errorMessage || 'Provisioning failed')
+        return
+      }
       next = await window.electronAPI.activation.injectConfig({
         targetConfigPath:
           platform === 'windows' ? '/root/.openclaw/openclaw.json' : '~/.openclaw/openclaw.json'
       })
       setSnapshot(next)
+      if (next.phase === 'error') {
+        setError(next.errorMessage || 'Config injection failed')
+        return
+      }
       next = await window.electronAPI.activation.validate({ expectGatewayReachable: true })
       setSnapshot(next)
       if (next.phase === 'completed') {
         onActivationComplete()
+      } else {
+        setError(next.errorMessage || 'Validation failed')
       }
     },
     [onActivationComplete, platform]
@@ -91,7 +99,11 @@ export default function ActivationStep({
         setSnapshot(next)
         if (next.phase === 'provisioning') {
           clearInterval(interval)
-          await runProvisioningChain(next)
+          try {
+            await runProvisioningChain(next)
+          } catch (e) {
+            setError(e instanceof Error ? e.message : 'Provisioning chain failed')
+          }
         }
       } catch {
         /* keep polling */
@@ -106,11 +118,8 @@ export default function ActivationStep({
     setWorking(true)
     setError(null)
     try {
-      // Bootstrap first if not yet linked
-      let snap = snapshot
-      if (!emailLinked && email.trim()) {
-        snap = await bootstrap(email.trim())
-      }
+      // Always bootstrap with email to ensure setupToken is fresh
+      const snap = email.trim() ? await bootstrap(email.trim()) : snapshot
       if (!snap) {
         setWorking(false)
         return
@@ -128,6 +137,12 @@ export default function ActivationStep({
       } else {
         const next = await window.electronAPI.activation.startPurchase({ path: 'buy_and_connect' })
         setSnapshot(next)
+        if (next.phase === 'purchase_pending' && next.purchase.checkoutUrl) {
+          const opened = await window.electronAPI.system.openExternal(next.purchase.checkoutUrl)
+          if (!opened.success) {
+            setError(opened.error ?? 'Failed to open checkout URL.')
+          }
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('activation.errors.generic'))

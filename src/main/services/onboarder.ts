@@ -12,6 +12,7 @@ import {
   resolveWslOpenClawConfigPath,
   resolveWslOpenClawStateDir
 } from './wsl-utils'
+import { OPENCLAW_PROCESS_PATTERN } from './process-match'
 import { t } from '../../shared/i18n/main'
 
 interface OnboardConfig {
@@ -288,7 +289,7 @@ export const runOnboard = async (
       }
     }
     await new Promise<void>((resolve) => {
-      const child = spawn('pkill', ['-9', '-f', 'openclaw'])
+      const child = spawn('pkill', ['-9', '-f', OPENCLAW_PROCESS_PATTERN])
       child.on('close', () => resolve())
       child.on('error', () => resolve())
     })
@@ -637,7 +638,7 @@ export const switchProvider = async (
     await wslKillOpenclaw().catch(() => {})
   } else {
     await new Promise<void>((resolve) => {
-      const child = spawn('pkill', ['-9', '-f', 'openclaw'])
+      const child = spawn('pkill', ['-9', '-f', OPENCLAW_PROCESS_PATTERN])
       child.on('close', () => resolve())
       child.on('error', () => resolve())
     })

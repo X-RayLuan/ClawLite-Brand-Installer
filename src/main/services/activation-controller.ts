@@ -350,8 +350,10 @@ export class ActivationController {
     }
 
     try {
+      const accountId = snapshot.binding.account?.accountId
       const remote = await postJson<RemotePurchaseResponse>(activationApiEndpoints.purchase, {
         setupToken,
+        accountId,
         intent: 'buy_and_connect'
       })
       snapshot.purchase.status = remote.purchaseState ?? 'checkout_pending'

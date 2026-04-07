@@ -6,6 +6,7 @@ import { registerIpcHandlers, getSavedLocale } from './ipc-handlers'
 import { createTray, startPolling, destroyTray } from './services/tray-manager'
 import { setupAutoUpdater, checkForUpdates } from './services/updater'
 import { startGateway } from './services/gateway'
+import { buildRendererCrashHtml } from './services/renderer-crash'
 import { initI18nMain } from '../shared/i18n/main'
 import icon from '../../resources/icon.png?asset'
 
@@ -48,6 +49,7 @@ function createWindow(): void {
     if (!startHidden) {
       mainWindow?.show()
       mainWindow?.focus()
+      mainWindow?.webContents.openDevTools({ mode: 'detach' })
     }
   })
 
@@ -110,12 +112,20 @@ function createWindow(): void {
     mainWindow?.loadFile(join(__dirname, '../renderer/index.html')).catch(() => {})
   })
 
-  mainWindow.webContents.on('render-process-gone', () => {
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    console.error('[clawlite] renderer process gone', {
+      reason: details?.reason,
+      exitCode: details?.exitCode
+    })
+
     mainWindow
       ?.loadURL(
         'data:text/html;charset=utf-8,' +
           encodeURIComponent(
-            '<html><body style="font-family:-apple-system,system-ui;padding:24px;background:#0b1020;color:#e5e7eb"><h2>ClawLite Renderer Crashed</h2><p>Please reinstall the latest build and try again.</p></body></html>'
+            buildRendererCrashHtml({
+              reason: details?.reason,
+              exitCode: details?.exitCode
+            })
           )
       )
       .catch(() => {})
