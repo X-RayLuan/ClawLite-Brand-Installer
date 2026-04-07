@@ -179,7 +179,7 @@ function App(): React.JSX.Element {
           {currentStep === 'telegramGuide' && (
             <TelegramGuideStep onNext={() => {
               if (activatedViaClawRouter) {
-                goTo('done')
+                goTo('config')
               } else {
                 next()
               }
@@ -190,6 +190,7 @@ function App(): React.JSX.Element {
               provider={provider}
               authMethod={authMethod}
               modelId={modelId}
+              apiKeyPreFilled={activatedViaClawRouter}
               onDone={handleDone}
             />
           )}

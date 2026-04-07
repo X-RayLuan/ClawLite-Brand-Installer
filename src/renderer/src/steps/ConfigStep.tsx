@@ -29,6 +29,7 @@ interface Props {
   provider: Provider
   authMethod?: 'api-key' | 'oauth'
   modelId?: string
+  apiKeyPreFilled?: boolean
   onDone: (botUsername?: string) => void
 }
 
@@ -36,6 +37,7 @@ export default function ConfigStep({
   provider,
   authMethod,
   modelId,
+  apiKeyPreFilled,
   onDone
 }: Props): React.JSX.Element {
   const { t } = useTranslation(['steps', 'common'])
@@ -52,9 +54,9 @@ export default function ConfigStep({
   const pattern = providerPatterns[provider]
   const label = t(`config.apiKeyLabel.${provider}`)
   const placeholder = tp(`apiKeyPlaceholder.${provider}`, providerPlaceholders[provider])
-  const apiKeyValid = pattern.test(apiKey)
+  const apiKeyValid = apiKeyPreFilled || pattern.test(apiKey)
   const botTokenValid = botToken ? BOT_TOKEN_PATTERN.test(botToken) : true
-  const canSave = isOAuth ? oauthDone && !saving : apiKeyValid && !saving
+  const canSave = apiKeyPreFilled ? !saving : isOAuth ? oauthDone && !saving : apiKeyValid && !saving
 
   const handleOAuthLogin = async (): Promise<void> => {
     setOauthLoading(true)
@@ -84,7 +86,7 @@ export default function ConfigStep({
     try {
       const result = await window.electronAPI.onboard.run({
         provider,
-        ...(isOAuth ? {} : { apiKey }),
+        ...(apiKeyPreFilled ? {} : isOAuth ? {} : { apiKey }),
         authMethod: authMethod ?? 'api-key',
         telegramBotToken: botToken || undefined,
         modelId
@@ -112,7 +114,24 @@ export default function ConfigStep({
           </div>
         </div>
 
-        {isOAuth ? (
+        {apiKeyPreFilled ? (
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-success/10 border border-success/30 rounded-xl">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-success"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span className="text-sm font-medium text-success">ClawRouter API key configured</span>
+          </div>
+        ) : isOAuth ? (
           <div className="space-y-1.5">
             <label className="text-sm font-bold">OpenAI {t('apiKeyGuide.authMethod.oauth')}</label>
             {oauthDone ? (
