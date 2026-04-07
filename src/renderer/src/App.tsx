@@ -73,6 +73,7 @@ function App(): React.JSX.Element {
   const [isWindows, setIsWindows] = useState(false)
   const [wslState, setWslState] = useState<WslState>('ready')
   const [version, setVersion] = useState('')
+  const [activatedViaClawRouter, setActivatedViaClawRouter] = useState(false)
 
   // Load version + OS check + reboot restoration on app start
   useEffect(() => {
@@ -154,7 +155,10 @@ function App(): React.JSX.Element {
               appVersion={version || '0.0.0'}
               platform={isWindows ? 'windows' : 'macos'}
               onUseOwnKey={() => goTo('apiKeyGuide')}
-              onActivationComplete={() => goTo('telegramGuide')}
+              onActivationComplete={() => {
+                setActivatedViaClawRouter(true)
+                goTo('telegramGuide')
+              }}
             />
           )}
           {currentStep === 'apiKeyGuide' && (
@@ -172,7 +176,15 @@ function App(): React.JSX.Element {
               onNext={next}
             />
           )}
-          {currentStep === 'telegramGuide' && <TelegramGuideStep onNext={next} />}
+          {currentStep === 'telegramGuide' && (
+            <TelegramGuideStep onNext={() => {
+              if (activatedViaClawRouter) {
+                goTo('done')
+              } else {
+                next()
+              }
+            }} />
+          )}
           {currentStep === 'config' && (
             <ConfigStep
               provider={provider}
