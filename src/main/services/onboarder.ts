@@ -583,6 +583,64 @@ export const readCurrentConfig = async (): Promise<CurrentConfig | null> => {
   }
 }
 
+export const setTelegramBotToken = async (
+  token: string
+): Promise<{ botUsername?: string }> => {
+  const isWindows = platform() === 'win32'
+  const trimmed = token.trim()
+  if (!trimmed) return {}
+
+  const botUsername = await fetchBotUsername(trimmed)
+  await waitTelegramClear(trimmed)
+
+  if (isWindows) {
+    const wslConfigPath = await resolveWslOpenClawConfigPath()
+    let ocConfig: Record<string, unknown> = {}
+    try {
+      const raw = await readWslFile(wslConfigPath)
+      ocConfig = JSON.parse(raw) as Record<string, unknown>
+    } catch {
+      ocConfig = {}
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const cfg = ocConfig as any
+    cfg.channels = cfg.channels ?? {}
+    cfg.channels.telegram = {
+      enabled: true,
+      botToken: trimmed,
+      polling: true,
+      allow: ['dm']
+    }
+
+    await writeWslFile(wslConfigPath, JSON.stringify(ocConfig, null, 2))
+    return { botUsername }
+  }
+
+  const configPath = join(homedir(), '.openclaw', 'openclaw.json')
+  let ocConfig: Record<string, unknown> = {}
+  if (existsSync(configPath)) {
+    try {
+      ocConfig = JSON.parse(readFileSync(configPath, 'utf-8')) as Record<string, unknown>
+    } catch {
+      ocConfig = {}
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cfg = ocConfig as any
+  cfg.channels = cfg.channels ?? {}
+  cfg.channels.telegram = {
+    enabled: true,
+    botToken: trimmed,
+    polling: true,
+    allow: ['dm']
+  }
+
+  writeFileSync(configPath, JSON.stringify(ocConfig, null, 2), { mode: 0o600 })
+  return { botUsername }
+}
+
 export const switchProvider = async (
   win: BrowserWindow,
   config: {

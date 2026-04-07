@@ -123,6 +123,7 @@ interface ElectronAPI {
       authMethod?: 'api-key' | 'oauth'
       modelId?: string
     }) => Promise<{ success: boolean; error?: string }>
+    setTelegramToken: (token: string) => Promise<{ success: boolean; error?: string; botUsername?: string }>
   }
   openclaw: {
     checkUpdate: () => Promise<{ currentVersion: string | null; latestVersion: string | null }>

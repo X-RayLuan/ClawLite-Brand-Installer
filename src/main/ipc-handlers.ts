@@ -14,7 +14,7 @@ import {
   installNodeWsl,
   installOpenClawWsl
 } from './services/installer'
-import { runOnboard, readCurrentConfig, switchProvider } from './services/onboarder'
+import { runOnboard, readCurrentConfig, setTelegramBotToken, switchProvider } from './services/onboarder'
 import {
   startGateway,
   stopGateway,
@@ -268,6 +268,16 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
       }
     }
   )
+
+  ipcMain.handle('config:set-telegram-token', async (_e, token: string) => {
+    try {
+      const result = await setTelegramBotToken(token)
+      return { success: true, botUsername: result.botUsername }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      return { success: false, error: msg }
+    }
+  })
 
   // Forward Gateway logs to renderer
   setGatewayLogCallback((msg) => {

@@ -176,7 +176,9 @@ const electronAPI = {
       authMethod?: 'api-key' | 'oauth'
       modelId?: string
     }): Promise<{ success: boolean; error?: string }> =>
-      ipcRenderer.invoke('config:switch-provider', config)
+      ipcRenderer.invoke('config:switch-provider', config),
+    setTelegramToken: (token: string): Promise<{ success: boolean; error?: string; botUsername?: string }> =>
+      ipcRenderer.invoke('config:set-telegram-token', token)
   },
   openclaw: {
     checkUpdate: (): Promise<{ currentVersion: string | null; latestVersion: string | null }> =>

@@ -84,9 +84,23 @@ export default function ConfigStep({
     setError(null)
     clearLogs()
     try {
+      if (apiKeyPreFilled) {
+        if (botToken) {
+          const result = await window.electronAPI.config.setTelegramToken(botToken)
+          if (result.success) {
+            onDone(result.botUsername)
+          } else {
+            setError(result.error ?? t('config.errorOccurred'))
+          }
+        } else {
+          onDone()
+        }
+        return
+      }
+
       const result = await window.electronAPI.onboard.run({
         provider,
-        ...(apiKeyPreFilled ? {} : isOAuth ? {} : { apiKey }),
+        ...(isOAuth ? {} : { apiKey }),
         authMethod: authMethod ?? 'api-key',
         telegramBotToken: botToken || undefined,
         modelId
