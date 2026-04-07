@@ -1,5 +1,5 @@
 import { spawnSync } from 'child_process'
-import { app } from 'electron'
+import { app, clipboard } from 'electron'
 import { platform } from 'os'
 
 /**
@@ -9,6 +9,17 @@ import { platform } from 'os'
  * Returns null if not on macOS, no xattr present, or no email found.
  */
 export function readEmailFromInstallSource(): string | null {
+  // Try clipboard first — website copies email on download click
+  try {
+    const clip = clipboard.readText().trim()
+    if (clip && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clip)) {
+      return clip
+    }
+  } catch {
+    /* ignore */
+  }
+
+  // Fallback: try macOS xattr
   if (platform() !== 'darwin') return null
 
   try {
@@ -21,11 +32,6 @@ export function readEmailFromInstallSource(): string | null {
 
     if (result.status !== 0 || !result.stdout) return null
 
-    // Output is a parenthesized list of URLs, e.g.:
-    // (
-    //     "https://clawlite.ai/api/installer-download?email=user@example.com",
-    //     "https://github.com/.../clawlite.dmg"
-    // )
     const matches = result.stdout.match(/https?:\/\/[^\s",)]+/g)
     if (!matches) return null
 
