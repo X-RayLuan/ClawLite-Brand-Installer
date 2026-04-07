@@ -48,7 +48,6 @@ function createWindow(): void {
     if (!startHidden) {
       mainWindow?.show()
       mainWindow?.focus()
-      mainWindow?.webContents.openDevTools({ mode: 'detach' })
     }
   })
 

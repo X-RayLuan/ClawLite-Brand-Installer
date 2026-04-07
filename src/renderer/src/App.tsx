@@ -154,7 +154,7 @@ function App(): React.JSX.Element {
               appVersion={version || '0.0.0'}
               platform={isWindows ? 'windows' : 'macos'}
               onUseOwnKey={() => goTo('apiKeyGuide')}
-              onActivationComplete={() => goTo('done')}
+              onActivationComplete={() => goTo('telegramGuide')}
             />
           )}
           {currentStep === 'apiKeyGuide' && (
