@@ -114,6 +114,7 @@ export interface ActivationFlowSnapshot {
 
 export interface ActivationBootstrapInput {
   downloadSessionId?: string
+  accountId?: string
   installerInstanceId: string
   platform: ActivationPlatform
   appVersion: string

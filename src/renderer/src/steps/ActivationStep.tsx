@@ -34,6 +34,7 @@ export default function ActivationStep({
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [accountIdInput, setAccountIdInput] = useState('')
 
   const refresh = useCallback(async (): Promise<void> => {
     setLoading(true)
@@ -42,7 +43,8 @@ export default function ActivationStep({
       const state = await window.electronAPI.activation.bootstrap({
         installerInstanceId: 'clawlite-installer',
         platform,
-        appVersion
+        appVersion,
+        accountId: accountIdInput || undefined
       })
       setSnapshot(state)
     } catch (e) {
@@ -50,7 +52,7 @@ export default function ActivationStep({
     } finally {
       setLoading(false)
     }
-  }, [appVersion, platform, t])
+  }, [appVersion, platform, t, accountIdInput])
 
   useEffect(() => {
     void refresh()
@@ -179,6 +181,18 @@ export default function ActivationStep({
           </p>
         </div>
 
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Account ID or email (from clawlite.ai)"
+            value={accountIdInput}
+            onChange={(e) => setAccountIdInput(e.target.value)}
+            className="flex-1 rounded-xl border border-glass-border bg-white/5 px-3 py-2 text-xs text-text placeholder:text-text-muted/50 focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          <Button size="sm" onClick={() => void refresh()} disabled={loading}>
+            {loading ? 'Checking...' : 'Link Account'}
+          </Button>
+        </div>
 
         <div className="grid gap-3 lg:grid-cols-3">
           <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 space-y-2">
@@ -302,29 +316,6 @@ export default function ActivationStep({
         </div>
 
   
-        {snapshot?.offers?.length ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            {snapshot.offers.map((offer) => (
-              <div
-                key={offer.id}
-                className={`rounded-2xl border p-4 space-y-2 ${offer.tag === 'official' ? 'border-primary/30 bg-primary/10' : 'border-warning/30 bg-warning/10'}`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-bold">{offer.title}</p>
-                  <span className="text-[10px] uppercase tracking-[0.18em] text-text-muted/70">
-                    {offer.tag}
-                  </span>
-                </div>
-                <p className="text-xs text-text-muted">{offer.summary}</p>
-                <div className="grid gap-1 text-[11px] text-text-muted/80">
-                  <p>{offer.priceLabel}</p>
-                  <p>{offer.settlementLabel}</p>
-                  <p>{offer.deliveryEstimate}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : null}
         {snapshot?.provisioning.credentialRef && (
           <div className="rounded-2xl border border-success/30 bg-success/10 p-4 space-y-1.5">
             <p className="text-sm font-bold text-success">{t('activation.summary.title')}</p>

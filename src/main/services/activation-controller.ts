@@ -241,6 +241,7 @@ export class ActivationController {
     try {
       const remote = await postJson<RemoteBootstrapResponse>(activationApiEndpoints.bootstrap, {
         downloadSessionId: input.downloadSessionId,
+        accountId: input.accountId,
         installerInstanceId: input.installerInstanceId,
         platform: input.platform,
         appVersion: input.appVersion
@@ -387,8 +388,11 @@ export class ActivationController {
     }
 
     try {
+      const accountId = snapshot.binding.account?.accountId
+      let qs = `setupToken=${encodeURIComponent(setupToken)}`
+      if (accountId) qs += `&accountId=${encodeURIComponent(accountId)}`
       const remote = await getJson<RemotePurchaseResponse>(
-        `${activationApiEndpoints.purchaseState}?setupToken=${encodeURIComponent(setupToken)}`
+        `${activationApiEndpoints.purchaseState}?${qs}`
       )
       snapshot.purchase.status = remote.purchaseState ?? snapshot.purchase.status
       snapshot.purchase.lastUpdatedAt = nowIso()
@@ -448,6 +452,7 @@ export class ActivationController {
     try {
       const remote = await postJson<RemoteProvisionResponse>(activationApiEndpoints.provision, {
         setupToken,
+        accountId: snapshot.binding.account?.accountId,
         deviceLabel: input.deviceLabel,
         platform: snapshot.binding.platform
       })
@@ -487,7 +492,7 @@ export class ActivationController {
       targetPath: string,
       patchProvider: string,
       patchCredentialRef: string,
-      patchModel: string
+      _patchModel: string
     ): void => {
       const resolved = targetPath.replace(/^~/, homedir())
       const dir = join(resolved, '..')
@@ -512,13 +517,23 @@ export class ActivationController {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const cfg = ocConfig as any
-      if (!cfg.models) cfg.models = {}
+      if (!cfg.models) cfg.models = { mode: 'merge', providers: {} }
       if (!cfg.models.providers) cfg.models.providers = {}
       cfg.models.providers[patchProvider] = {
-        credentialRef: patchCredentialRef,
-        models: [{ id: patchModel }]
+        baseUrl: 'https://openrouter.ezsite.ai/api/claude',
+        apiKey: patchCredentialRef,
+        api: 'anthropic-messages',
+        models: [
+          {
+            id: 'claude-sonnet-4-6',
+            name: 'Claude Sonnet 4.6 (ClawRouter)',
+            reasoning: false,
+            input: ['text'],
+            contextWindow: 200000,
+            maxTokens: 64000
+          }
+        ]
       }
-      if (!cfg.models.default) cfg.models.default = patchModel
 
       writeFileSync(resolved, JSON.stringify(ocConfig, null, 2), { mode: 0o600 })
     }
@@ -557,6 +572,7 @@ export class ActivationController {
     try {
       const remote = await postJson<RemoteConfigResponse>(activationApiEndpoints.injectConfig, {
         setupToken,
+        accountId: snapshot.binding.account?.accountId,
         bindingId,
         targetConfigPath: input.targetConfigPath
       })
