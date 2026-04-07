@@ -125,24 +125,20 @@ export default function ActivationStep({
         return
       }
 
-      // If already active, go straight to provisioning
-      if (snap.purchase.entitlement === 'active') {
-        const next = await window.electronAPI.activation.startPurchase({
-          path: 'connect_existing_purchase'
-        })
-        setSnapshot(next)
-        if (next.phase === 'provisioning') {
-          await runProvisioningChain(next)
+      const next = await window.electronAPI.activation.startPurchase({ path: 'buy_and_connect' })
+      setSnapshot(next)
+      if (next.phase === 'purchase_pending' && next.purchase.checkoutUrl) {
+        const opened = await window.electronAPI.system.openExternal(next.purchase.checkoutUrl)
+        if (!opened.success) {
+          setError(opened.error ?? 'Failed to open checkout URL.')
         }
+      } else if (next.phase === 'provisioning') {
+        // Defensive fallback if backend short-circuits due stale account state.
+        await runProvisioningChain(next)
+      } else if (next.phase === 'error') {
+        setError(next.errorMessage || t('activation.errors.generic'))
       } else {
-        const next = await window.electronAPI.activation.startPurchase({ path: 'buy_and_connect' })
-        setSnapshot(next)
-        if (next.phase === 'purchase_pending' && next.purchase.checkoutUrl) {
-          const opened = await window.electronAPI.system.openExternal(next.purchase.checkoutUrl)
-          if (!opened.success) {
-            setError(opened.error ?? 'Failed to open checkout URL.')
-          }
-        }
+        setError('Checkout URL not ready. Please try again.')
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('activation.errors.generic'))
