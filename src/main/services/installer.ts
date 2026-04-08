@@ -13,6 +13,7 @@ import {
 } from './windows-powershell'
 import { createDecodedLineCollector } from './stream-lines'
 import { decodeWindowsCommandOutput } from './windows-output-decoder'
+import { isLikelySuccessfulWslInstallResult, isWslRebootRequiredText } from './wsl-install-result'
 import { t } from '../../shared/i18n/main'
 
 type ProgressCallback = (msg: string) => void
@@ -151,16 +152,16 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
       try {
         const parsed = JSON.parse(fileResult)
         const attempts = Array.isArray(parsed.attempts) ? parsed.attempts : []
-        // Check if any attempt succeeded (exit 0) or had no stderr
-        const anySuccess = attempts.some(
-          (a: { exitCode?: number | null; stderrBytes?: number }) =>
-            a.exitCode === 0 || a.exitCode === 1 || (a.stderrBytes === 0 && a.exitCode !== null)
-        )
         const finalExit = parsed.finalExitCode ?? -1
         const reached = parsed.reached === true
-        // exitCode 1 from wsl.exe typically means "reboot required"
-        // If reached + no stderr on any attempt, or finalExit is 0 or 1, treat as success
-        if (reached || finalExit === 0 || finalExit === 1 || anySuccess) {
+        if (
+          isLikelySuccessfulWslInstallResult({
+            finalExitCode: finalExit,
+            reached,
+            attempts,
+            outputText: fileStdout
+          })
+        ) {
           wslLikelySucceeded = true
         }
         // Only build debug summary for logs, not for user display
@@ -186,6 +187,31 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
       log('WSL installation appears to have completed. A reboot may be required.')
       return { needsReboot: true }
     }
+
+    // Also check errLines/errMsg for JSON result (PowerShell may output it to stdout)
+    if (!wslLikelySucceeded) {
+      const allText = errMsg + '\n' + errLines + '\n' + fileStdout
+      const jsonMatch = allText.match(/\{[\s\S]*"attempts"[\s\S]*\}/)
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[0])
+          const attempts = Array.isArray(parsed.attempts) ? parsed.attempts : []
+          const finalExit = parsed.finalExitCode ?? -1
+          const reached = parsed.reached === true
+          if (
+            isLikelySuccessfulWslInstallResult({
+              finalExitCode: finalExit,
+              reached,
+              attempts,
+              outputText: allText
+            })
+          ) {
+            log('WSL installation appears to have completed (detected from stdout). A reboot may be required.')
+            return { needsReboot: true }
+          }
+        } catch {}
+      }
+    }
     const combined = summarizeElevatedPowerShellFailure({
       fileStdout,
       fileStderr,
@@ -199,7 +225,11 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
     })
 
     // Check if WSL actually completed despite stderr noise
-    if (combined.toLowerCase().includes('completed') || combined.toLowerCase().includes('successfully')) {
+    if (
+      combined.toLowerCase().includes('completed') ||
+      combined.toLowerCase().includes('successfully') ||
+      isWslRebootRequiredText(combined)
+    ) {
       log('WSL installation appears to have completed despite stderr output.')
       log('A reboot may be required to finalize.')
       return { needsReboot: true }
