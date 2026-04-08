@@ -229,6 +229,57 @@ const createBaseSnapshot = (
 const cloneSnapshot = (snapshot: ActivationFlowSnapshot): ActivationFlowSnapshot =>
   JSON.parse(JSON.stringify(snapshot)) as ActivationFlowSnapshot
 
+function setDefaultAgentModelRoute(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  cfg: any,
+  primaryModel: string
+): void {
+  cfg.agents = cfg.agents ?? {}
+  cfg.agents.defaults = cfg.agents.defaults ?? {}
+
+  const currentModel = cfg.agents.defaults.model && typeof cfg.agents.defaults.model === 'object'
+    ? cfg.agents.defaults.model
+    : {}
+  const existingFallbacks = Array.isArray(currentModel.fallbacks)
+    ? currentModel.fallbacks.filter((value: unknown): value is string => typeof value === 'string' && value !== primaryModel)
+    : []
+
+  cfg.agents.defaults.model = {
+    ...currentModel,
+    primary: primaryModel,
+    fallbacks: existingFallbacks
+  }
+
+  const currentAllowlist =
+    cfg.agents.defaults.models && typeof cfg.agents.defaults.models === 'object'
+      ? cfg.agents.defaults.models
+      : {}
+
+  cfg.agents.defaults.models = {
+    ...currentAllowlist,
+    [primaryModel]: currentAllowlist[primaryModel] ?? {}
+  }
+
+  if (Array.isArray(cfg.agents.list)) {
+    const mainAgent = cfg.agents.list.find(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (agent: any) => agent && agent.id === 'main' && agent.model && typeof agent.model === 'object'
+    )
+
+    if (mainAgent) {
+      const mainFallbacks = Array.isArray(mainAgent.model.fallbacks)
+        ? mainAgent.model.fallbacks.filter((value: unknown): value is string => typeof value === 'string' && value !== primaryModel)
+        : []
+
+      mainAgent.model = {
+        ...mainAgent.model,
+        primary: primaryModel,
+        fallbacks: mainFallbacks
+      }
+    }
+  }
+}
+
 export class ActivationController {
   private snapshot: ActivationFlowSnapshot | null = null
 
@@ -423,7 +474,7 @@ export class ActivationController {
 
   async provision(input: ActivationProvisionInput): Promise<ActivationFlowSnapshot> {
     const snapshot = this.requireSnapshot()
-    if (!useRemoteActivation() && snapshot.purchase.entitlement !== 'active') {
+    if (snapshot.purchase.entitlement !== 'active') {
       snapshot.phase = 'error'
       snapshot.errorMessage = 'Cannot provision before purchase entitlement is active.'
       return cloneSnapshot(snapshot)
@@ -538,6 +589,10 @@ export class ActivationController {
             maxTokens: 64000
           }
         ]
+      }
+
+      if (patchProvider === 'clawrouter') {
+        setDefaultAgentModelRoute(cfg, 'clawrouter/claude-sonnet-4-6')
       }
 
       writeFileSync(resolved, JSON.stringify(ocConfig, null, 2), { mode: 0o600 })

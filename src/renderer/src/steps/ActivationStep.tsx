@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '../components/Button'
 import type { ActivationFlowSnapshot } from '@shared/activation/types'
+import { shouldAutoResumeProvisioning } from './activation-flow-helpers'
 
 interface Props {
   appVersion: string
@@ -121,6 +122,46 @@ export default function ActivationStep({
     return () => clearInterval(interval)
   }, [snapshot?.phase, runProvisioningChain])
 
+  useEffect(() => {
+    if (!shouldAutoResumeProvisioning(snapshot) || working) return
+
+    let cancelled = false
+    void (async () => {
+      try {
+        setWorking(true)
+        setError(null)
+        const next = await window.electronAPI.activation.startPurchase({
+          path: 'connect_existing_purchase'
+        })
+        if (cancelled) return
+        setSnapshot(next)
+        if (
+          next.phase === 'provisioning' ||
+          next.phase === 'config_injection' ||
+          next.phase === 'validation'
+        ) {
+          await runProvisioningChain(next)
+          return
+        }
+        if (next.phase === 'error') {
+          setError(next.errorMessage || 'Failed to resume ClawRouter activation')
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : 'Failed to resume ClawRouter activation')
+        }
+      } finally {
+        if (!cancelled) {
+          setWorking(false)
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [snapshot, runProvisioningChain, working])
+
   // --- Buy ClawRouter handlers ---
 
   const handleBuyClick = async (): Promise<void> => {
@@ -176,12 +217,6 @@ export default function ActivationStep({
       }
 
       if (next.phase === 'purchase_pending') {
-        next = await window.electronAPI.activation.provision({ deviceLabel: 'ClawLite Installer' })
-        setSnapshot(next)
-        if (next.phase === 'provisioning' || next.phase === 'config_injection' || next.phase === 'validation') {
-          await runProvisioningChain(next)
-          return
-        }
         setError(next.errorMessage || 'Payment is still syncing. Please try again in a few seconds.')
       }
     } catch (e) {
