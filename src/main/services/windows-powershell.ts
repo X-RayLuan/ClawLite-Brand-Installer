@@ -65,16 +65,42 @@ export const buildElevatedWslInstallScript = (
   stdoutPath: string,
   stderrPath: string
 ): string => {
+  const fallbackMatcher = [
+    '$stderrText = ""',
+    'if (Test-Path $stderrPath) { $stderrText = Get-Content -Path $stderrPath -Raw }',
+    '$stdoutText = ""',
+    'if (Test-Path $stdoutPath) { $stdoutText = Get-Content -Path $stdoutPath -Raw }',
+    '$combinedText = ($stdoutText + "`n" + $stderrText)',
+    '$needsLegacyFallback = ($LASTEXITCODE -ne 0) -and ($combinedText -match "wsl.exe \\[|--install <|wsl --list --online|no-launch|invalid command line option|unrecognized option")'
+  ].join('\n')
+
   const innerScript = [
+    "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+    "[Console]::InputEncoding = [System.Text.Encoding]::UTF8",
     "$ProgressPreference = 'SilentlyContinue'",
     "$ErrorActionPreference = 'Stop'",
     `$stdoutPath = ${quotePowerShellPath(stdoutPath)}`,
     `$stderrPath = ${quotePowerShellPath(stderrPath)}`,
     'wsl.exe --install -d Ubuntu --no-launch 1> $stdoutPath 2> $stderrPath',
+    fallbackMatcher,
+    'if ($needsLegacyFallback) {',
+    '  wsl.exe --install -d Ubuntu 1> $stdoutPath 2> $stderrPath',
+    '  $stderrText = ""',
+    '  if (Test-Path $stderrPath) { $stderrText = Get-Content -Path $stderrPath -Raw -Encoding UTF8 }',
+    '  $stdoutText = ""',
+    '  if (Test-Path $stdoutPath) { $stdoutText = Get-Content -Path $stdoutPath -Raw -Encoding UTF8 }',
+    '  $combinedText = ($stdoutText + "`n" + $stderrText)',
+    '  $needsLegacyFallback = ($LASTEXITCODE -ne 0) -and ($combinedText -match "wsl.exe \\[|--install <|wsl --list --online|invalid command line option|unrecognized option")',
+    '}',
+    'if ($needsLegacyFallback) {',
+    '  wsl.exe --install 1> $stdoutPath 2> $stderrPath',
+    '}',
     'exit $LASTEXITCODE'
   ].join('\n')
 
   return [
+    "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+    "[Console]::InputEncoding = [System.Text.Encoding]::UTF8",
     "$ProgressPreference = 'SilentlyContinue'",
     "$ErrorActionPreference = 'Stop'",
     `  $stdoutPath = ${quotePowerShellPath(stdoutPath)}`,
@@ -82,13 +108,13 @@ export const buildElevatedWslInstallScript = (
     `  $encodedInner = '${encodePowerShellScript(innerScript)}'`,
     'try {',
     '  $p = Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", $encodedInner) -Verb RunAs -Wait -PassThru',
-    '  if (Test-Path $stdoutPath) { Get-Content -Path $stdoutPath }',
-    '  if (Test-Path $stderrPath) { Get-Content -Path $stderrPath }',
+    '  if (Test-Path $stdoutPath) { Get-Content -Path $stdoutPath -Encoding UTF8 }',
+    '  if (Test-Path $stderrPath) { Get-Content -Path $stderrPath -Encoding UTF8 }',
     '  exit $p.ExitCode',
     '} catch {',
     '  Write-Output $_.Exception.ToString()',
-    '  if (Test-Path $stdoutPath) { Get-Content -Path $stdoutPath }',
-    '  if (Test-Path $stderrPath) { Get-Content -Path $stderrPath }',
+    '  if (Test-Path $stdoutPath) { Get-Content -Path $stdoutPath -Encoding UTF8 }',
+    '  if (Test-Path $stderrPath) { Get-Content -Path $stderrPath -Encoding UTF8 }',
     '  exit 1',
     '}'
   ].join('\n')
