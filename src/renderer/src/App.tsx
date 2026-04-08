@@ -73,6 +73,7 @@ function App(): React.JSX.Element {
   const [botUsername, setBotUsername] = useState<string | undefined>()
   const [isWindows, setIsWindows] = useState(false)
   const [wslState, setWslState] = useState<WslState>('ready')
+  const [resumedWslInstall, setResumedWslInstall] = useState(false)
   const [version, setVersion] = useState('')
   const [activatedViaClawRouter, setActivatedViaClawRouter] = useState(false)
 
@@ -89,6 +90,7 @@ function App(): React.JSX.Element {
       const state = await window.electronAPI.wizard.loadState()
       if (state) {
         if (env.os === 'windows' && env.wslState) {
+          setResumedWslInstall(Boolean(state.wslInstalled && state.step === 'wslSetup'))
           setWslState(resolveResumedWslState(env.wslState, state))
         }
         goTo(state.step as 'wslSetup' | 'envCheck')
@@ -110,6 +112,7 @@ function App(): React.JSX.Element {
     // Windows + WSL not ready → navigate to wslSetup
     if (env.os === 'windows' && env.wslState && env.wslState !== 'ready') {
       setWslState(env.wslState)
+      setResumedWslInstall(false)
       goTo('wslSetup')
       return
     }
@@ -120,6 +123,7 @@ function App(): React.JSX.Element {
   const handleWslReady = useCallback((): void => {
     // WSL ready → clear state file and re-run envCheck
     window.electronAPI.wizard.clearState()
+    setResumedWslInstall(false)
     goTo('envCheck')
   }, [goTo])
 
@@ -149,7 +153,11 @@ function App(): React.JSX.Element {
             <EnvCheckStep onNext={() => goTo('activation')} onNeedInstall={handleEnvCheckDone} />
           )}
           {currentStep === 'wslSetup' && (
-            <WslSetupStep wslState={wslState} onReady={handleWslReady} />
+            <WslSetupStep
+              wslState={wslState}
+              resumedAfterReboot={resumedWslInstall}
+              onReady={handleWslReady}
+            />
           )}
           {currentStep === 'install' && (
             <InstallStep needs={installNeeds} onDone={() => goTo('activation')} />

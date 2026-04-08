@@ -13,10 +13,15 @@ type WslState =
 
 interface WslSetupStepProps {
   wslState: WslState
+  resumedAfterReboot?: boolean
   onReady: () => void
 }
 
-export default function WslSetupStep({ wslState, onReady }: WslSetupStepProps): React.JSX.Element {
+export default function WslSetupStep({
+  wslState,
+  resumedAfterReboot = false,
+  onReady
+}: WslSetupStepProps): React.JSX.Element {
   const { t } = useTranslation('steps')
   const [installing, setInstalling] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -86,6 +91,19 @@ export default function WslSetupStep({ wslState, onReady }: WslSetupStepProps): 
     window.electronAPI.reboot()
   }
 
+  const handleCheckAfterReboot = async (): Promise<void> => {
+    setInstalling(true)
+    setError(null)
+    try {
+      const state = await window.electronAPI.wsl.check()
+      setCurrentState(state)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('wslSetup.wslError'))
+    } finally {
+      setInstalling(false)
+    }
+  }
+
   const logoState = installing ? 'loading' : currentState === 'ready' ? 'success' : 'idle'
 
   return (
@@ -114,12 +132,22 @@ export default function WslSetupStep({ wslState, onReady }: WslSetupStepProps): 
       {currentState === 'needs_reboot' && (
         <div className="text-center space-y-3 max-w-sm">
           <div className="glass-card px-5 py-4 space-y-2">
-            <p className="text-sm font-semibold text-primary">{t('wslSetup.rebootRequired')}</p>
-            <p className="text-text-muted text-xs leading-relaxed">{t('wslSetup.rebootDesc')}</p>
+            <p className="text-sm font-semibold text-primary">
+              {resumedAfterReboot ? t('wslSetup.rebootStillPending') : t('wslSetup.rebootRequired')}
+            </p>
+            <p className="text-text-muted text-xs leading-relaxed">
+              {resumedAfterReboot ? t('wslSetup.rebootStillPendingDesc') : t('wslSetup.rebootDesc')}
+            </p>
           </div>
-          <Button variant="primary" size="lg" onClick={handleReboot}>
-            {t('wslSetup.rebootNow')}
-          </Button>
+          {resumedAfterReboot ? (
+            <Button variant="primary" size="lg" onClick={handleCheckAfterReboot} loading={installing}>
+              {installing ? t('envCheck.checkBtn') : t('wslSetup.checkAgain')}
+            </Button>
+          ) : (
+            <Button variant="primary" size="lg" onClick={handleReboot}>
+              {t('wslSetup.rebootNow')}
+            </Button>
+          )}
         </div>
       )}
 
