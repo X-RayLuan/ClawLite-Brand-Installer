@@ -21,7 +21,7 @@ test('buildElevatedWslInstallScript uses an explicit wsl.exe path and argument a
   assert.match(script, /\$stderrPath = 'C:\/temp\/wsl\.stderr\.log'/)
   assert.match(script, /\$ProgressPreference = 'SilentlyContinue'/)
   assert.match(innerScript, /wsl\.exe --install -d Ubuntu --no-launch 1> \$stdoutPath 2> \$stderrPath/)
-  assert.match(innerScript, /\$needsLegacyFallback = \(\$LASTEXITCODE -ne 0\) -and \(\$combinedText -match "wsl\.exe \\\[/)
+  assert.match(innerScript, /if \(\$LASTEXITCODE -ne 0\) \{\n  wsl\.exe --install -d Ubuntu 1> \$stdoutPath 2> \$stderrPath/)
   assert.match(innerScript, /wsl\.exe --install -d Ubuntu 1> \$stdoutPath 2> \$stderrPath/)
   assert.match(innerScript, /wsl\.exe --install 1> \$stdoutPath 2> \$stderrPath/)
   assert.doesNotMatch(script, /-RedirectStandardOutput/)
