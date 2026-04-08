@@ -288,8 +288,28 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
       log('WSL components installed but a reboot is required.')
       return { needsReboot: true }
     }
-    // Generic error with full details
-    throw new Error(`WSL installation failed. Details: ${combined}`)
+    // Final cleanup: strip JSON blobs, non-readable lines, and internal debug info
+    const userMessage = combined
+      .split('\n')
+      .filter((line) => {
+        const t = line.trim()
+        if (!t) return false
+        // Strip JSON lines
+        if (t.startsWith('{') || t.startsWith('}') || t.startsWith('"') || t.startsWith('[')) return false
+        // Strip lines that are mostly non-ASCII
+        const nonAscii = (t.match(/[^\x20-\x7E]/g) || []).length
+        if (t.length > 5 && nonAscii > t.length * 0.3) return false
+        // Strip internal debug patterns
+        if (/^(attempts|exitCode|stdoutBytes|stderrBytes|exception|reached|finalExitCode|name)\s*:/i.test(t)) return false
+        if (/^\s*\d+\s*$/.test(t)) return false
+        return true
+      })
+      .join('\n')
+      .trim()
+
+    // If after cleanup there's nothing meaningful, give a generic message
+    const finalMessage = userMessage || 'WSL installation failed. Please try running "wsl --install" manually in an elevated PowerShell window.'
+    throw new Error(finalMessage)
   } finally {
     rmSync(stdoutPath, { force: true })
     rmSync(stderrPath, { force: true })

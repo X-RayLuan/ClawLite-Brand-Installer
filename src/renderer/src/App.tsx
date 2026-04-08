@@ -6,6 +6,7 @@ import { useWizard } from './hooks/useWizard'
 import WelcomeStep from './steps/WelcomeStep'
 import EnvCheckStep from './steps/EnvCheckStep'
 import WslSetupStep from './steps/WslSetupStep'
+import { resolveResumedWslState } from './steps/wsl-resume-state'
 import InstallStep from './steps/InstallStep'
 import ActivationStep from './steps/ActivationStep'
 import ApiKeyGuideStep from './steps/ApiKeyGuideStep'
@@ -87,6 +88,9 @@ function App(): React.JSX.Element {
       // Restore state after reboot — run after wslState is correctly set
       const state = await window.electronAPI.wizard.loadState()
       if (state) {
+        if (env.os === 'windows' && env.wslState) {
+          setWslState(resolveResumedWslState(env.wslState, state))
+        }
         goTo(state.step as 'wslSetup' | 'envCheck')
       }
     })
