@@ -7,6 +7,7 @@ import https from 'https'
 import { BrowserWindow } from 'electron'
 import { runInWsl } from './wsl-utils'
 import { getPathEnv } from './path-utils'
+import { buildElevatedWslInstallScript, buildEncodedPowerShellArgs } from './windows-powershell'
 import { t } from '../../shared/i18n/main'
 
 type ProgressCallback = (msg: string) => void
@@ -115,16 +116,11 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
   log(t('installer.wslInstalling'))
   log(t('installer.wslAdminPrompt'))
   try {
-    const psCommand = [
-      'try {',
-      "  $p = Start-Process -FilePath 'wsl' -ArgumentList '--install -d Ubuntu --no-launch' -Verb RunAs -Wait -PassThru;",
-      '  exit $p.ExitCode',
-      '} catch {',
-      '  Write-Output $_.Exception.Message;',
-      '  exit 1',
-      '}'
-    ].join(' ')
-    await runWithLog('powershell', ['-NoProfile', '-Command', psCommand], log)
+    await runWithLog(
+      'powershell',
+      buildEncodedPowerShellArgs(buildElevatedWslInstallScript()),
+      log
+    )
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : ''
     const errLines = ((err as RunError).lines ?? []).join('\n')
@@ -166,6 +162,23 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
       throw new Error(`${t('installer.biosVirtualization')} - Please enable Virtualization (VT-x/AMD-V) in BIOS settings.`)
     }
     
+    // Network / download failure
+    if (lower.includes('download') || lower.includes('network') || lower.includes('0x800') || lower.includes('timeout')) {
+      throw new Error('WSL download failed — check your internet connection and try again. If behind a proxy, configure system proxy settings first.')
+    }
+    // Windows optional features not enabled
+    if (lower.includes('optional feature') || lower.includes('dism') || lower.includes('windowsoptionalfeature') || lower.includes('enable-windowsoptionalfeature')) {
+      throw new Error('Required Windows features are not enabled. Please run in an elevated PowerShell:\n  dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart\n  dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart\nThen reboot and try again.')
+    }
+    // PowerShell execution policy
+    if (lower.includes('execution policy') || lower.includes('is not digitally signed') || lower.includes('cannot be loaded because running scripts is disabled')) {
+      throw new Error('PowerShell execution policy is blocking the installer. Run this in an elevated PowerShell first:\n  Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned\nThen try again.')
+    }
+    // Reboot required (WSL partially installed)
+    if (lower.includes('reboot') || lower.includes('restart') || lower.includes('3010')) {
+      log('WSL components installed but a reboot is required.')
+      return { needsReboot: true }
+    }
     // Generic error with full details
     throw new Error(`WSL installation failed. Details: ${combined}`)
   }
