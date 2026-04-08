@@ -66,6 +66,7 @@ export const summarizeElevatedPowerShellFailure = ({
   fileStderr,
   errLines,
   errMsg,
+  resultSummary,
   stdoutExists,
   stderrExists,
   stdoutSize,
@@ -75,6 +76,7 @@ export const summarizeElevatedPowerShellFailure = ({
   fileStderr: string
   errLines: string
   errMsg: string
+  resultSummary?: string
   stdoutExists: boolean
   stderrExists: boolean
   stdoutSize: number
@@ -95,6 +97,10 @@ export const summarizeElevatedPowerShellFailure = ({
     `stderr log: ${stderrExists ? 'present' : 'missing'} (${stderrSize} bytes)`
   ]
 
+  if (resultSummary) {
+    lines.push(resultSummary)
+  }
+
   if (parentOutput && parentOutput !== 'Command failed: powershell.exe [encoded command hidden]') {
     lines.push(`parent error: ${parentOutput}`)
   }
@@ -106,55 +112,53 @@ export const buildElevatedWslInstallScript = (
   stdoutPath: string,
   stderrPath: string
 ): string => {
+  const resultPath = `${stdoutPath}.result.json`
   const innerScript = [
     "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
     "[Console]::InputEncoding = [System.Text.Encoding]::UTF8",
     "$OutputEncoding = [System.Text.Encoding]::UTF8",
     "$ProgressPreference = 'SilentlyContinue'",
-    "$ErrorActionPreference = 'Stop'",
+    "$ErrorActionPreference = 'Continue'",
     `$stdoutPath = ${quotePowerShellPath(stdoutPath)}`,
     `$stderrPath = ${quotePowerShellPath(stderrPath)}`,
-    'wsl.exe --install -d Ubuntu --no-launch 1> $stdoutPath 2> $stderrPath',
-    'foreach ($f in @($stdoutPath, $stderrPath)) {',
-    '  if (Test-Path $f) {',
-    '    try {',
-      '      $raw = [System.IO.File]::ReadAllBytes($f)',
-      '      if ($raw.Length -ge 2 -and $raw[0] -eq 0xFF -and $raw[1] -eq 0xFE) {',
-      '        $text = [System.Text.Encoding]::Unicode.GetString($raw)',
-      '        [System.IO.File]::WriteAllText($f, $text, [System.Text.Encoding]::UTF8)',
-      '      }',
-    '    } catch {}',
+    `$resultPath = ${quotePowerShellPath(resultPath)}`,
+    '$attempts = @(',
+    '  @{ name = "install-no-launch"; args = @("--install", "-d", "Ubuntu", "--no-launch") },',
+    '  @{ name = "install-distro"; args = @("--install", "-d", "Ubuntu") },',
+    '  @{ name = "install-bare"; args = @("--install") }',
+    ')',
+    '$result = @{ started = $true; attempts = @(); finalExitCode = 1 }',
+    '$wslExitCode = 1',
+    'foreach ($attempt in $attempts) {',
+    '  $entry = @{',
+    '    name = $attempt.name',
+    '    command = @("wsl.exe") + $attempt.args',
+    '    reached = $true',
+    '    exitCode = $null',
+    '    stdoutBytes = 0',
+    '    stderrBytes = 0',
+    '    exception = $null',
     '  }',
-    '}',
-    'if ($LASTEXITCODE -ne 0) {',
-    '  wsl.exe --install -d Ubuntu 1> $stdoutPath 2> $stderrPath',
-    '  foreach ($f in @($stdoutPath, $stderrPath)) {',
-    '    if (Test-Path $f) {',
-    '      try {',
-    '        $raw = [System.IO.File]::ReadAllBytes($f)',
-    '        if ($raw.Length -ge 2 -and $raw[0] -eq 0xFF -and $raw[1] -eq 0xFE) {',
-    '          $text = [System.Text.Encoding]::Unicode.GetString($raw)',
-    '          [System.IO.File]::WriteAllText($f, $text, [System.Text.Encoding]::UTF8)',
-    '        }',
-    '      } catch {}',
-    '    }',
+    '  try {',
+    '    $out = & wsl.exe @($attempt.args) 2>&1 | Out-String',
+    '    $wslExitCode = $LASTEXITCODE',
+    '    $entry.exitCode = $wslExitCode',
+    '    [System.IO.File]::WriteAllText($stdoutPath, $out, [System.Text.Encoding]::UTF8)',
+    '  } catch {',
+    '    $wslExitCode = 1',
+    '    $entry.exitCode = 1',
+    '    $entry.exception = $_.Exception.ToString()',
+    '    [System.IO.File]::WriteAllText($stderrPath, $_.Exception.ToString(), [System.Text.Encoding]::UTF8)',
     '  }',
+    '  if (Test-Path $stdoutPath) { $entry.stdoutBytes = ([System.IO.File]::ReadAllBytes($stdoutPath)).Length }',
+    '  if (Test-Path $stderrPath) { $entry.stderrBytes = ([System.IO.File]::ReadAllBytes($stderrPath)).Length }',
+    '  $result.attempts += $entry',
+    '  $result.finalExitCode = $wslExitCode',
+    '  if ($wslExitCode -eq 0) { break }',
     '}',
-    'if ($LASTEXITCODE -ne 0) {',
-    '  wsl.exe --install 1> $stdoutPath 2> $stderrPath',
-    '  foreach ($f in @($stdoutPath, $stderrPath)) {',
-    '    if (Test-Path $f) {',
-    '      try {',
-    '        $raw = [System.IO.File]::ReadAllBytes($f)',
-    '        if ($raw.Length -ge 2 -and $raw[0] -eq 0xFF -and $raw[1] -eq 0xFE) {',
-    '          $text = [System.Text.Encoding]::Unicode.GetString($raw)',
-    '          [System.IO.File]::WriteAllText($f, $text, [System.Text.Encoding]::UTF8)',
-    '        }',
-    '      } catch {}',
-    '    }',
-    '  }',
-    '}',
-    'exit $LASTEXITCODE'
+    '$resultJson = $result | ConvertTo-Json -Depth 6',
+    '[System.IO.File]::WriteAllText($resultPath, $resultJson, [System.Text.Encoding]::UTF8)',
+    'exit $wslExitCode'
   ].join('\n')
 
   return [
@@ -166,6 +170,7 @@ export const buildElevatedWslInstallScript = (
     "$ErrorActionPreference = 'Stop'",
     `  $stdoutPath = ${quotePowerShellPath(stdoutPath)}`,
     `  $stderrPath = ${quotePowerShellPath(stderrPath)}`,
+    `  $resultPath = ${quotePowerShellPath(resultPath)}`,
     `  $encodedInner = '${encodePowerShellScript(innerScript)}'`,
     // Helper function to read file with BOM detection
     'function Read-FileAutoEncoding($path) {',
@@ -183,11 +188,13 @@ export const buildElevatedWslInstallScript = (
     '  $p = Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", $encodedInner) -Verb RunAs -Wait -PassThru',
     '  Write-Output (Read-FileAutoEncoding $stdoutPath)',
     '  Write-Output (Read-FileAutoEncoding $stderrPath)',
+    '  Write-Output (Read-FileAutoEncoding $resultPath)',
     '  exit $p.ExitCode',
     '} catch {',
     '  Write-Output $_.Exception.ToString()',
     '  Write-Output (Read-FileAutoEncoding $stdoutPath)',
     '  Write-Output (Read-FileAutoEncoding $stderrPath)',
+    '  Write-Output (Read-FileAutoEncoding $resultPath)',
     '  exit 1',
     '}'
   ].join('\n')

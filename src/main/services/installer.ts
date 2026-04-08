@@ -111,6 +111,7 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const stdoutPath = join(tmpdir(), `clawlite-wsl-install-${stamp}.out.log`)
   const stderrPath = join(tmpdir(), `clawlite-wsl-install-${stamp}.err.log`)
+  const resultPath = `${stdoutPath}.result.json`
 
   log(t('installer.wslInstalling'))
   log(t('installer.wslAdminPrompt'))
@@ -140,18 +141,50 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
     }
     const fileStdout = readWithBom(stdoutPath)
     const fileStderr = readWithBom(stderrPath)
+    const fileResult = readWithBom(resultPath)
     const errMsg = err instanceof Error ? err.message : ''
     const errLines = ((err as RunError).lines ?? []).join('\n')
     const stdoutExists = existsSync(stdoutPath)
     const stderrExists = existsSync(stderrPath)
+    const resultExists = existsSync(resultPath)
     const { statSync } = require('fs')
     const stdoutSize = stdoutExists ? statSync(stdoutPath).size : 0
     const stderrSize = stderrExists ? statSync(stderrPath).size : 0
+    const resultSize = resultExists ? statSync(resultPath).size : 0
+    let resultSummary = ''
+    if (fileResult) {
+      try {
+        const parsed = JSON.parse(fileResult)
+        const attemptSummary = Array.isArray(parsed.attempts)
+          ? parsed.attempts
+              .map(
+                (attempt: {
+                  name?: string
+                  exitCode?: number | null
+                  stdoutBytes?: number
+                  stderrBytes?: number
+                }) =>
+                  `${attempt.name ?? 'unknown'} exit=${attempt.exitCode ?? 'null'} stdout=${attempt.stdoutBytes ?? 0} stderr=${attempt.stderrBytes ?? 0}`
+              )
+              .join('; ')
+          : ''
+        resultSummary = [
+          `result log: ${resultExists ? 'present' : 'missing'} (${resultSize} bytes)`,
+          `final exit code: ${parsed.finalExitCode ?? 'unknown'}`,
+          attemptSummary ? `attempts: ${attemptSummary}` : ''
+        ]
+          .filter(Boolean)
+          .join('\n')
+      } catch {
+        resultSummary = `result log: ${resultExists ? 'present' : 'missing'} (${resultSize} bytes)`
+      }
+    }
     const combined = summarizeElevatedPowerShellFailure({
       fileStdout,
       fileStderr,
       errLines,
       errMsg,
+      resultSummary,
       stdoutExists,
       stderrExists,
       stdoutSize,
@@ -223,6 +256,7 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
   } finally {
     rmSync(stdoutPath, { force: true })
     rmSync(stderrPath, { force: true })
+    rmSync(resultPath, { force: true })
   }
   log(t('installer.wslDone'))
   return { needsReboot: true }
