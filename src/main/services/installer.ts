@@ -73,7 +73,7 @@ const runWithLog = (
   new Promise((resolve, reject) => {
     const child = spawn(cmd, args, {
       shell: options?.shell ?? false,
-      env: options?.env ?? process.env,
+      env: { ...options?.env ?? process.env, PYTHONIOENCODING: 'utf-8', CHCP: '65001' },
       cwd: options?.cwd
     })
 
