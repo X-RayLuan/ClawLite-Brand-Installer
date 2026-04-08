@@ -12,6 +12,7 @@ import {
   summarizeElevatedPowerShellFailure
 } from './windows-powershell'
 import { createDecodedLineCollector } from './stream-lines'
+import { decodeWindowsCommandOutput } from './windows-output-decoder'
 import { t } from '../../shared/i18n/main'
 
 type ProgressCallback = (msg: string) => void
@@ -126,15 +127,7 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
     const readWithBom = (filePath: string): string => {
       try {
         const buf = require('fs').readFileSync(filePath)
-        // UTF-16LE BOM: FF FE
-        if (buf.length >= 2 && buf[0] === 0xFF && buf[1] === 0xFE) {
-          return buf.slice(2).toString('utf16le')
-        }
-        // UTF-8 BOM: EF BB BF
-        if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) {
-          return buf.slice(3).toString('utf8')
-        }
-        return buf.toString('utf8')
+        return decodeWindowsCommandOutput(buf)
       } catch {
         return ''
       }
