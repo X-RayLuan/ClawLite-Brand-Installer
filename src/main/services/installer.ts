@@ -1,5 +1,4 @@
 import { spawn } from 'child_process'
-import { StringDecoder } from 'string_decoder'
 import { createWriteStream, existsSync, mkdirSync, rmSync } from 'fs'
 import { tmpdir, homedir } from 'os'
 import { join } from 'path'
@@ -12,6 +11,7 @@ import {
   buildEncodedPowerShellArgs,
   sanitizePowerShellErrorOutput
 } from './windows-powershell'
+import { createDecodedLineCollector } from './stream-lines'
 import { t } from '../../shared/i18n/main'
 
 type ProgressCallback = (msg: string) => void
@@ -78,29 +78,21 @@ const runWithLog = (
     })
 
     const lines: string[] = []
-    const outDecoder = new StringDecoder('utf8')
-    const errDecoder = new StringDecoder('utf8')
+    const onLine = (line: string): void => {
+      onLog(line)
+      lines.push(line)
+    }
+    const stdoutCollector = createDecodedLineCollector(onLine)
+    const stderrCollector = createDecodedLineCollector(onLine)
     child.stdout.on('data', (d) => {
-      outDecoder
-        .write(d)
-        .split('\n')
-        .filter(Boolean)
-        .forEach((l) => {
-          onLog(l)
-          lines.push(l)
-        })
+      stdoutCollector.push(d)
     })
     child.stderr.on('data', (d) => {
-      errDecoder
-        .write(d)
-        .split('\n')
-        .filter(Boolean)
-        .forEach((l) => {
-          onLog(l)
-          lines.push(l)
-        })
+      stderrCollector.push(d)
     })
     child.on('close', (code) => {
+      stdoutCollector.end()
+      stderrCollector.end()
       if (code === 0) resolve(lines)
       else {
         const err: RunError = new Error(`Command failed: ${cmd} ${args.join(' ')} (exit ${code})`)
