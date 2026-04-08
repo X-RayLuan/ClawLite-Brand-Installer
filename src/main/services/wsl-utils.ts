@@ -1,5 +1,6 @@
 import { spawn } from 'child_process'
 import { posix as pathPosix } from 'path'
+import { buildWslCommandVariants, isLegacyWslCommandHelpText } from './wsl-command'
 import { detectWslStateFromOutputs } from './wsl-state-detection'
 
 export type WslState =
@@ -29,13 +30,40 @@ const runCmd = (cmd: string, args: string[], timeout = 15000): Promise<string> =
     child.on('close', (code) => {
       clearTimeout(timer)
       if (code === 0) resolve(stdout.replace(/\0/g, '').trim())
-      else reject(new Error(stderr.replace(/\0/g, '') || `exit ${code}`))
+      else reject(new Error(stderr.replace(/\0/g, '') || stdout.replace(/\0/g, '') || `exit ${code}`))
     })
     child.on('error', (err) => {
       clearTimeout(timer)
       reject(err)
     })
   })
+
+const runWslCommand = async (
+  commandArgs: string[],
+  timeout: number,
+  options: {
+    distro?: string
+    user?: string
+  } = {}
+): Promise<string> => {
+  const variants = buildWslCommandVariants(commandArgs, options)
+  let lastError: unknown = null
+
+  for (let index = 0; index < variants.length; index += 1) {
+    try {
+      return await runCmd('wsl', variants[index], timeout)
+    } catch (error) {
+      lastError = error
+      const message = error instanceof Error ? error.message : String(error)
+      const shouldRetryLegacy = index === 0 && variants.length > 1 && isLegacyWslCommandHelpText(message)
+      if (!shouldRetryLegacy) {
+        throw error
+      }
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError))
+}
 
 export const checkWslState = async (): Promise<WslState> => {
   let versionOk = false
@@ -74,7 +102,7 @@ export const checkWslState = async (): Promise<WslState> => {
     if (!ubuntuDistro) return 'no_distro'
     // Verify distro is registered and working properly
     try {
-      await runCmd('wsl', ['-d', ubuntuDistro, '-u', WSL_USER, '--', 'echo', 'ok'])
+      await runWslCommand(['echo', 'ok'], 15000, { distro: ubuntuDistro, user: WSL_USER })
       return 'ready'
     } catch (error) {
       return detectWslStateFromOutputs({
@@ -92,67 +120,49 @@ export const checkWslState = async (): Promise<WslState> => {
 
 /** Run command via bash -lc inside WSL Ubuntu (auto-loads nvm PATH) */
 export const runInWsl = (script: string, timeout = 30000): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const child = spawn('wsl', ['-d', WSL_DISTRO, '-u', WSL_USER, '--', 'bash', '-lc', script])
-    const timer = setTimeout(() => {
-      child.kill()
-      reject(new Error('timeout'))
-    }, timeout)
-    let stdout = ''
-    let stderr = ''
-    child.stdout.on('data', (d) => (stdout += d.toString()))
-    child.stderr.on('data', (d) => (stderr += d.toString()))
-    child.on('close', (code) => {
-      clearTimeout(timer)
-      if (code === 0) resolve(stdout.replace(/\0/g, '').trim())
-      else reject(new Error(stderr.replace(/\0/g, '') || `exit ${code}`))
-    })
-    child.on('error', (err) => {
-      clearTimeout(timer)
-      reject(err)
-    })
-  })
+  runWslCommand(['bash', '-lc', script], timeout, { distro: WSL_DISTRO, user: WSL_USER })
 
 /** Read file inside WSL */
 export const readWslFile = (path: string): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const child = spawn('wsl', ['-d', WSL_DISTRO, '-u', WSL_USER, '--', 'cat', path])
-    const timer = setTimeout(() => {
-      child.kill()
-      reject(new Error(`Timeout reading ${path}`))
-    }, 10000)
-    let stdout = ''
-    child.stdout.on('data', (d) => (stdout += d.toString()))
-    child.on('close', (code) => {
-      clearTimeout(timer)
-      if (code === 0) resolve(stdout)
-      else reject(new Error(`Failed to read ${path}`))
-    })
-    child.on('error', (err) => {
-      clearTimeout(timer)
-      reject(err)
-    })
-  })
+  runWslCommand(['cat', path], 10000, { distro: WSL_DISTRO, user: WSL_USER })
 
 /** Write file inside WSL */
 export const writeWslFile = (path: string, content: string): Promise<void> =>
   new Promise((resolve, reject) => {
-    const child = spawn('wsl', ['-d', WSL_DISTRO, '-u', WSL_USER, '--', 'tee', path])
-    const timer = setTimeout(() => {
-      child.kill()
-      reject(new Error(`Timeout writing ${path}`))
-    }, 10000)
-    child.stdout.resume() // Consume tee stdout to prevent buffer hang
-    child.stdin.write(content, () => child.stdin.end())
-    child.on('close', (code) => {
-      clearTimeout(timer)
-      if (code === 0) resolve()
-      else reject(new Error(`Failed to write ${path}`))
+    const variants = buildWslCommandVariants(['tee', path], {
+      distro: WSL_DISTRO,
+      user: WSL_USER
     })
-    child.on('error', (err) => {
-      clearTimeout(timer)
-      reject(err)
-    })
+    const runVariant = (index: number): void => {
+      const child = spawn('wsl', variants[index])
+      const timer = setTimeout(() => {
+        child.kill()
+        reject(new Error(`Timeout writing ${path}`))
+      }, 10000)
+      let stdout = ''
+      let stderr = ''
+      child.stdout.on('data', (d) => (stdout += d.toString()))
+      child.stderr.on('data', (d) => (stderr += d.toString()))
+      child.stdin.write(content, () => child.stdin.end())
+      child.on('close', (code) => {
+        clearTimeout(timer)
+        if (code === 0) {
+          resolve()
+          return
+        }
+        const message = stderr.replace(/\0/g, '') || stdout.replace(/\0/g, '') || `Failed to write ${path}`
+        if (index === 0 && variants.length > 1 && isLegacyWslCommandHelpText(message)) {
+          runVariant(index + 1)
+          return
+        }
+        reject(new Error(message))
+      })
+      child.on('error', (err) => {
+        clearTimeout(timer)
+        reject(err)
+      })
+    }
+    runVariant(0)
   })
 
 export const resolveWslOpenClawConfigPath = async (): Promise<string> => {
