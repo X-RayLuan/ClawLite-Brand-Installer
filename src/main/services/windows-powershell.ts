@@ -57,12 +57,17 @@ export const sanitizePowerShellErrorOutput = (raw: string): string => {
     )
     .filter(Boolean)
     // Strip PowerShell internal exception metadata lines
-    .filter((line) => !line.match(/^\s*\+\s*CategoryInfo/i))
-    .filter((line) => !line.match(/^\s*\+\s*FullyQualifiedErrorId/i))
+    .filter((line) => !line.match(/^\s*\+?\s*CategoryInfo/i))
+    .filter((line) => !line.match(/^\s*\+?\s*FullyQualifiedErrorId/i))
     .filter((line) => !line.match(/RemoteException/i))
     .filter((line) => !line.match(/NativeCommandError/i))
     .filter((line) => !line.match(/^\s*\+\s*~+\s*$/))
-    .filter((line) => !line.match(/^\s*所在位置.*行:\d+.*字符/i))
+    .filter((line) => !line.match(/所在位置.*行:\d+.*字符/i))
+    .filter((line) => !line.match(/NotSpecified.*\[\].*Exception/i))
+    .filter((line) => !line.match(/^\s*at line:\d+/i))
+    .filter((line) => !line.match(/^\s*\+ .*\.ps1:\d+/i))
+    .filter((line) => !line.match(/^\s*\d+\s*:\s*Stri/i))
+    .filter((line) => !line.match(/^\s*\\00:/i))
     // Strip garbled short blobs (non-ASCII heavy lines with little readable content)
     .filter((line) => {
       const nonAscii = (line.match(/[^\x20-\x7E]/g) || []).length
