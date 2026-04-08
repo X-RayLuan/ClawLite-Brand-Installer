@@ -64,28 +64,37 @@ export default function ActivationStep({
   const runProvisioningChain = useCallback(
     async (current: ActivationFlowSnapshot): Promise<void> => {
       let next = current
-      next = await window.electronAPI.activation.provision({ deviceLabel: 'ClawLite Installer' })
-      setSnapshot(next)
+      if (next.phase === 'provisioning') {
+        next = await window.electronAPI.activation.provision({ deviceLabel: 'ClawLite Installer' })
+        setSnapshot(next)
+      }
       if (next.phase === 'error') {
         setError(next.errorMessage || 'Provisioning failed')
         return
       }
-      next = await window.electronAPI.activation.injectConfig({
-        targetConfigPath:
-          platform === 'windows' ? '/root/.openclaw/openclaw.json' : '~/.openclaw/openclaw.json'
-      })
-      setSnapshot(next)
+
+      if (next.phase === 'config_injection') {
+        next = await window.electronAPI.activation.injectConfig({
+          targetConfigPath:
+            platform === 'windows' ? '/root/.openclaw/openclaw.json' : '~/.openclaw/openclaw.json'
+        })
+        setSnapshot(next)
+      }
       if (next.phase === 'error') {
         setError(next.errorMessage || 'Config injection failed')
         return
       }
-      next = await window.electronAPI.activation.validate({ expectGatewayReachable: true })
-      setSnapshot(next)
+
+      if (next.phase === 'validation') {
+        next = await window.electronAPI.activation.validate({ expectGatewayReachable: true })
+        setSnapshot(next)
+      }
       if (next.phase === 'completed') {
         onActivationComplete()
-      } else {
-        setError(next.errorMessage || 'Validation failed')
+        return
       }
+
+      setError(next.errorMessage || 'Activation could not continue after payment')
     },
     [onActivationComplete, platform]
   )
@@ -159,10 +168,21 @@ export default function ActivationStep({
     setWorking(true)
     setError(null)
     try {
-      const next = await window.electronAPI.activation.confirmPurchase()
+      let next = await window.electronAPI.activation.confirmPurchase()
       setSnapshot(next)
-      if (next.phase === 'provisioning') {
+      if (next.phase === 'provisioning' || next.phase === 'config_injection' || next.phase === 'validation') {
         await runProvisioningChain(next)
+        return
+      }
+
+      if (next.phase === 'purchase_pending') {
+        next = await window.electronAPI.activation.provision({ deviceLabel: 'ClawLite Installer' })
+        setSnapshot(next)
+        if (next.phase === 'provisioning' || next.phase === 'config_injection' || next.phase === 'validation') {
+          await runProvisioningChain(next)
+          return
+        }
+        setError(next.errorMessage || 'Payment is still syncing. Please try again in a few seconds.')
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('activation.errors.generic'))

@@ -423,7 +423,7 @@ export class ActivationController {
 
   async provision(input: ActivationProvisionInput): Promise<ActivationFlowSnapshot> {
     const snapshot = this.requireSnapshot()
-    if (snapshot.purchase.entitlement !== 'active') {
+    if (!useRemoteActivation() && snapshot.purchase.entitlement !== 'active') {
       snapshot.phase = 'error'
       snapshot.errorMessage = 'Cannot provision before purchase entitlement is active.'
       return cloneSnapshot(snapshot)
@@ -458,6 +458,9 @@ export class ActivationController {
         deviceLabel: input.deviceLabel,
         platform: snapshot.binding.platform
       })
+      snapshot.purchase.entitlement = 'active'
+      snapshot.purchase.status = 'completed'
+      snapshot.purchase.lastUpdatedAt = nowIso()
       snapshot.phase = 'config_injection'
       snapshot.provisioning = {
         status: remote.provisioningState === 'failed' ? 'failed' : 'bound',

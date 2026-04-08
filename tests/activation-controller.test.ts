@@ -93,3 +93,92 @@ test('activation controller falls back to mock state when remote bootstrap is un
 
   delete process.env.CLAWLITE_ACTIVATION_API_BASE
 })
+
+test('remote provision can continue after payment even if purchase-state is still pending', async () => {
+  process.env.CLAWLITE_ACTIVATION_API_BASE = 'https://clawlite.ai'
+  const originalFetch = globalThis.fetch
+
+  globalThis.fetch = async (input, init) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+
+    if (url.endsWith('/api/installer/activation/bootstrap')) {
+      return new Response(
+        JSON.stringify({
+          setupToken: 'stp_live_payment_sync',
+          account: {
+            accountId: 'acct_payment_sync',
+            emailMasked: 'ai***@gmail.com'
+          },
+          entitlement: { status: 'inactive', plan: 'clawrouter' },
+          allowedPaths: ['buy_and_connect', 'use_own_key'],
+          recommendedPath: 'buy_and_connect'
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    }
+
+    if (url.endsWith('/api/installer/activation/purchase')) {
+      return new Response(
+        JSON.stringify({
+          purchaseState: 'checkout_pending',
+          checkoutUrl: 'https://clawlite.ai/checkout/demo-clawrouter'
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    }
+
+    if (url.includes('/api/installer/activation/purchase-state?')) {
+      return new Response(
+        JSON.stringify({
+          purchaseState: 'checkout_pending'
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    }
+
+    if (url.endsWith('/api/installer/activation/provision')) {
+      assert.equal(init?.method, 'POST')
+      return new Response(
+        JSON.stringify({
+          provisioningState: 'bound',
+          bindingId: 'clawrouter-account:acct_payment_sync',
+          credentialRef: 'or_live_inventory_key',
+          provider: 'clawrouter',
+          model: 'clawrouter/auto'
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    }
+
+    throw new Error(`Unexpected fetch URL: ${url}`)
+  }
+
+  try {
+    const controller = new ActivationController()
+    let next = await controller.bootstrap({
+      installerInstanceId: 'test-installer',
+      platform: 'macos',
+      appVersion: '1.3.96',
+      accountId: 'acct_payment_sync'
+    })
+
+    assert.equal(next.backendMode, 'remote')
+    assert.equal(next.phase, 'ready_for_activation')
+
+    next = await controller.startPurchase({ path: 'buy_and_connect' })
+    assert.equal(next.phase, 'purchase_pending')
+    assert.equal(next.purchase.status, 'checkout_pending')
+
+    next = await controller.confirmPurchase()
+    assert.equal(next.phase, 'purchase_pending')
+
+    next = await controller.provision({ deviceLabel: 'ClawLite Installer' })
+    assert.equal(next.phase, 'config_injection')
+    assert.equal(next.purchase.entitlement, 'active')
+    assert.equal(next.purchase.status, 'completed')
+    assert.equal(next.provisioning.credentialRef, 'or_live_inventory_key')
+  } finally {
+    globalThis.fetch = originalFetch
+    delete process.env.CLAWLITE_ACTIVATION_API_BASE
+  }
+})
