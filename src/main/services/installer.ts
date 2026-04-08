@@ -1,6 +1,6 @@
 import { spawn } from 'child_process'
 import { StringDecoder } from 'string_decoder'
-import { createWriteStream, existsSync, mkdirSync } from 'fs'
+import { createWriteStream, existsSync, mkdirSync, rmSync } from 'fs'
 import { tmpdir, homedir } from 'os'
 import { join } from 'path'
 import https from 'https'
@@ -112,19 +112,36 @@ const runWithLog = (
 /** Install WSL itself (wsl --install -d Ubuntu --no-launch) — UAC elevation */
 export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boolean }> => {
   const log = (msg: string): void => sendProgress(win, msg)
+  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const stdoutPath = join(tmpdir(), `clawlite-wsl-install-${stamp}.out.log`)
+  const stderrPath = join(tmpdir(), `clawlite-wsl-install-${stamp}.err.log`)
 
   log(t('installer.wslInstalling'))
   log(t('installer.wslAdminPrompt'))
   try {
     await runWithLog(
       'powershell',
-      buildEncodedPowerShellArgs(buildElevatedWslInstallScript()),
+      buildEncodedPowerShellArgs(buildElevatedWslInstallScript(stdoutPath, stderrPath)),
       log
     )
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : ''
     const errLines = ((err as RunError).lines ?? []).join('\n')
-    const combined = errMsg + '\n' + errLines
+    // Strip PowerShell CLIXML progress noise (causes garbled output and false errors)
+    const stripClixml = (s: string): string =>
+      s.replace(/#< CLIXML[\s\S]*?(?=\n[^<]|$)/g, '')
+       .replace(/<Objs[\s\S]*?<\/Objs>/g, '')
+       .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+       .replace(/\n{3,}/g, '\n\n')
+       .trim()
+    const combined = stripClixml(errMsg + '\n' + errLines)
+
+    // Check if WSL actually completed despite stderr noise
+    if (combined.toLowerCase().includes('completed') || combined.toLowerCase().includes('successfully')) {
+      log('WSL installation appears to have completed despite stderr output.')
+      log('A reboot may be required to finalize.')
+      return { needsReboot: true }
+    }
 
     // Log full error for debugging
     log('WSL installation error details:')
@@ -181,6 +198,9 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
     }
     // Generic error with full details
     throw new Error(`WSL installation failed. Details: ${combined}`)
+  } finally {
+    rmSync(stdoutPath, { force: true })
+    rmSync(stderrPath, { force: true })
   }
   log(t('installer.wslDone'))
   return { needsReboot: true }
