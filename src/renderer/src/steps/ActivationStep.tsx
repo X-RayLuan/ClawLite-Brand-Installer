@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import Button from '../components/Button'
 import type { ActivationFlowSnapshot } from '@shared/activation/types'
 import { shouldAutoResumeProvisioning } from './activation-flow-helpers'
+import { getConfirmPurchaseErrorMessage } from './activation-purchase-feedback'
 
 interface Props {
   appVersion: string
@@ -216,8 +217,9 @@ export default function ActivationStep({
         return
       }
 
-      if (next.phase === 'purchase_pending') {
-        setError(next.errorMessage || 'Payment is still syncing. Please try again in a few seconds.')
+      const nextError = getConfirmPurchaseErrorMessage(next)
+      if (nextError) {
+        setError(nextError)
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t('activation.errors.generic'))
