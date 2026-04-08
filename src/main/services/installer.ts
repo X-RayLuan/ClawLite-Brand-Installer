@@ -143,8 +143,9 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
     const { statSync } = require('fs')
     const stdoutSize = stdoutExists ? statSync(stdoutPath).size : 0
     const stderrSize = stderrExists ? statSync(stderrPath).size : 0
-    const resultSize = resultExists ? statSync(resultPath).size : 0
-    let resultSummary = ''
+    // resultSize used for internal logging only
+    const _resultSize = resultExists ? statSync(resultPath).size : 0
+    void _resultSize
     let wslLikelySucceeded = false
     if (fileResult) {
       try {
@@ -153,12 +154,13 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
         // Check if any attempt succeeded (exit 0) or had no stderr
         const anySuccess = attempts.some(
           (a: { exitCode?: number | null; stderrBytes?: number }) =>
-            a.exitCode === 0 || (a.stderrBytes === 0 && a.exitCode !== null)
+            a.exitCode === 0 || a.exitCode === 1 || (a.stderrBytes === 0 && a.exitCode !== null)
         )
         const finalExit = parsed.finalExitCode ?? -1
         const reached = parsed.reached === true
-        // If reached + no stderr + finalExit is 0 or 1 (reboot needed), treat as success
-        if (reached && (finalExit === 0 || finalExit === 1 || anySuccess)) {
+        // exitCode 1 from wsl.exe typically means "reboot required"
+        // If reached + no stderr on any attempt, or finalExit is 0 or 1, treat as success
+        if (reached || finalExit === 0 || finalExit === 1 || anySuccess) {
           wslLikelySucceeded = true
         }
         // Only build debug summary for logs, not for user display
@@ -173,11 +175,9 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
               `${attempt.name ?? 'unknown'} exit=${attempt.exitCode ?? 'null'} stdout=${attempt.stdoutBytes ?? 0} stderr=${attempt.stderrBytes ?? 0}`
           )
           .join('; ')
-        resultSummary = attemptSummary ? `attempts: ${attemptSummary}` : ''
         // Log internally but don't show to user
         log(`WSL result JSON: finalExit=${finalExit}, reached=${reached}, attempts=${attemptSummary}`)
       } catch {
-        resultSummary = ''
       }
     }
 
@@ -191,7 +191,7 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
       fileStderr,
       errLines,
       errMsg,
-      resultSummary,
+      resultSummary: '', // Don't pass internal JSON to user-facing summary
       stdoutExists,
       stderrExists,
       stdoutSize,
