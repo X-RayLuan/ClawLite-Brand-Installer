@@ -29,9 +29,9 @@ function createWindow(): void {
 
   mainWindow = new BrowserWindow({
     width: 800,
-    height: 700,
+    height: 840,
     minWidth: 800,
-    minHeight: 700,
+    minHeight: 840,
     resizable: true,
     // macOS: show immediately to avoid hidden-window edge cases on launch.
     show: process.platform === 'darwin',
