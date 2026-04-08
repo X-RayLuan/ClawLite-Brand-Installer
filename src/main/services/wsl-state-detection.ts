@@ -1,5 +1,17 @@
 import type { WslState } from './wsl-utils'
-import { isWslRebootRequiredText } from './wsl-install-result.ts'
+
+const isRebootRequiredText = (text: string): boolean => {
+  const lower = text.toLowerCase()
+  return (
+    lower.includes('reboot') ||
+    lower.includes('restart') ||
+    lower.includes('restart your computer') ||
+    lower.includes('restart is required') ||
+    lower.includes('installation will continue after restart') ||
+    text.includes('重启') ||
+    text.includes('重新启动')
+  )
+}
 
 export const detectWslStateFromOutputs = ({
   versionOk,
@@ -16,7 +28,7 @@ export const detectWslStateFromOutputs = ({
     return 'not_available'
   }
 
-  if (isWslRebootRequiredText(statusOutput) || isWslRebootRequiredText(distroLaunchError)) {
+  if (isRebootRequiredText(statusOutput) || isRebootRequiredText(distroLaunchError)) {
     return 'needs_reboot'
   }
 
