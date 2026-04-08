@@ -78,6 +78,7 @@ interface ElectronAPI {
     stop: () => Promise<{ success: boolean; error?: string }>
     restart: () => Promise<{ success: boolean; error?: string }>
     status: () => Promise<'running' | 'stopped'>
+    resetMainSession: () => Promise<{ success: boolean; error?: string }>
     onLog: (cb: (msg: string) => void) => () => void
     onStatusChanged: (cb: (status: 'running' | 'stopped') => void) => () => void
   }

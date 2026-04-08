@@ -8,15 +8,18 @@ import ManagementModal from '../components/ManagementModal'
 import ProviderSwitchModal from '../components/ProviderSwitchModal'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { useManagement } from '../hooks/useManagement'
+import { buildWebChatUrl, shouldResetMainSessionOnOpen } from './webchat-launch'
 
 const UPDATE_CHECK_INTERVAL = 30 * 60 * 1000 // 30 min
 
 export default function DoneStep({
   botUsername,
+  freshWebChatOnFirstOpen = false,
   onTroubleshoot,
   onUninstallDone
 }: {
   botUsername?: string
+  freshWebChatOnFirstOpen?: boolean
   onTroubleshoot?: () => void
   onUninstallDone?: () => void
 }): React.JSX.Element {
@@ -32,6 +35,7 @@ export default function DoneStep({
   const [gatewayToken, setGatewayToken] = useState<string | null>(null)
   const [hasTelegram, setHasTelegram] = useState(false)
   const [installerVersion, setInstallerVersion] = useState<string>('')
+  const [freshSessionConsumed, setFreshSessionConsumed] = useState(false)
 
   // OpenClaw update state
   const [openclawUpdate, setOpenclawUpdate] = useState<{
@@ -126,8 +130,6 @@ export default function DoneStep({
   }, [loadCurrentConfig])
 
   const openWebChat = async (): Promise<void> => {
-    const base = 'http://127.0.0.1:18789/'
-
     // Avoid stale UI state blocking WebChat: verify live gateway status once
     if (status !== 'running') {
       const s = await window.electronAPI.gateway.status()
@@ -155,11 +157,29 @@ export default function DoneStep({
       return
     }
 
+    if (
+      shouldResetMainSessionOnOpen({
+        freshSessionRequested: freshWebChatOnFirstOpen,
+        freshSessionConsumed
+      })
+    ) {
+      const resetResult = await window.electronAPI.gateway.resetMainSession()
+      if (!resetResult.success) {
+        setLogs((prev) => [
+          ...prev,
+          `Failed to reset Web Chat session before opening: ${resetResult.error || 'unknown error'}`
+        ])
+        setShowLogs(true)
+      } else {
+        setFreshSessionConsumed(true)
+      }
+    }
+
     // Preflight readiness retry (2~5s)
     let ready = false
     for (let i = 0; i < 6; i++) {
       try {
-        const res = await fetch(base, { method: 'GET' })
+        const res = await fetch('http://127.0.0.1:18789/', { method: 'GET' })
         if (res.ok || res.status > 0) {
           ready = true
           break
@@ -175,11 +195,7 @@ export default function DoneStep({
       setShowLogs(true)
     }
 
-    // OpenClaw Control UI currently consumes gateway tokens from the URL hash
-    // (`#token=...`) during boot. Passing `?token=...` looks valid, but the UI
-    // strips the query param before persisting it, which leaves the token blank
-    // and can trigger repeated unauthorized reconnects.
-    const url = `${base}#token=${encodeURIComponent(token)}`
+    const url = buildWebChatUrl(token)
     window.electronAPI.system.openExternal(url)
   }
 
