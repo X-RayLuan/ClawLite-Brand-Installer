@@ -129,9 +129,30 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
       log
     )
   } catch (err) {
+    // Read the actual WSL output files with proper encoding detection
+    const readWithBom = (filePath: string): string => {
+      try {
+        const buf = require('fs').readFileSync(filePath)
+        // UTF-16LE BOM: FF FE
+        if (buf.length >= 2 && buf[0] === 0xFF && buf[1] === 0xFE) {
+          return buf.slice(2).toString('utf16le')
+        }
+        // UTF-8 BOM: EF BB BF
+        if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) {
+          return buf.slice(3).toString('utf8')
+        }
+        return buf.toString('utf8')
+      } catch {
+        return ''
+      }
+    }
+    const fileStdout = readWithBom(stdoutPath)
+    const fileStderr = readWithBom(stderrPath)
+    const fileOutput = (fileStdout + '\n' + fileStderr).trim()
+
     const errMsg = err instanceof Error ? err.message : ''
     const errLines = ((err as RunError).lines ?? []).join('\n')
-    const childOutput = sanitizePowerShellErrorOutput(errLines)
+    const childOutput = sanitizePowerShellErrorOutput(fileOutput || errLines)
     const parentOutput = sanitizePowerShellErrorOutput(errMsg)
     const combined = childOutput || parentOutput
 
