@@ -9,6 +9,44 @@ export const buildEncodedPowerShellArgs = (script: string): string[] => [
   encodePowerShellScript(script)
 ]
 
+export const sanitizePowerShellErrorOutput = (raw: string): string => {
+  const withoutControlChars = raw.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+  const withoutClixml = withoutControlChars
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter(
+      (line) =>
+        !line.startsWith('#< CLIXML') &&
+        !line.startsWith('<Objs') &&
+        !line.startsWith('<Obj') &&
+        !line.startsWith('<TN') &&
+        !line.startsWith('<T>') &&
+        !line.startsWith('</') &&
+        !line.startsWith('<MS>') &&
+        !line.startsWith('<PR>') &&
+        !line.startsWith('<AV>') &&
+        !line.startsWith('<Nil')
+    )
+    .join('\n')
+
+  const withoutCommandBlob = withoutClixml
+    .replace(
+      /Command failed:\s*powershell(?:\.exe)?[\s\S]*?\(exit\s+\d+\)/gi,
+      'Command failed: powershell.exe [encoded command hidden]'
+    )
+    .replace(/-EncodedCommand(?:\s+[A-Za-z0-9+/=]{8,})+/g, '-EncodedCommand [hidden]')
+    .replace(/[A-Za-z0-9+/=]{120,}/g, '[encoded data hidden]')
+
+  return withoutCommandBlob
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => line !== 'Command failed: powershell.exe [encoded command hidden]' || withoutCommandBlob.split('\n').filter(Boolean).length === 1)
+    .join('\n')
+    .trim()
+}
+
 export const buildElevatedWslInstallScript = (
   stdoutPath: string,
   stderrPath: string

@@ -7,7 +7,11 @@ import https from 'https'
 import { BrowserWindow } from 'electron'
 import { runInWsl } from './wsl-utils'
 import { getPathEnv } from './path-utils'
-import { buildElevatedWslInstallScript, buildEncodedPowerShellArgs } from './windows-powershell'
+import {
+  buildElevatedWslInstallScript,
+  buildEncodedPowerShellArgs,
+  sanitizePowerShellErrorOutput
+} from './windows-powershell'
 import { t } from '../../shared/i18n/main'
 
 type ProgressCallback = (msg: string) => void
@@ -127,14 +131,9 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : ''
     const errLines = ((err as RunError).lines ?? []).join('\n')
-    // Strip PowerShell CLIXML progress noise (causes garbled output and false errors)
-    const stripClixml = (s: string): string =>
-      s.replace(/#< CLIXML[\s\S]*?(?=\n[^<]|$)/g, '')
-       .replace(/<Objs[\s\S]*?<\/Objs>/g, '')
-       .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
-       .replace(/\n{3,}/g, '\n\n')
-       .trim()
-    const combined = stripClixml(errMsg + '\n' + errLines)
+    const childOutput = sanitizePowerShellErrorOutput(errLines)
+    const parentOutput = sanitizePowerShellErrorOutput(errMsg)
+    const combined = childOutput || parentOutput
 
     // Check if WSL actually completed despite stderr noise
     if (combined.toLowerCase().includes('completed') || combined.toLowerCase().includes('successfully')) {

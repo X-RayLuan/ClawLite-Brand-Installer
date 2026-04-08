@@ -10,7 +10,7 @@ test('buildWebChatUrl encodes gateway token into the URL hash', () => {
   )
 })
 
-test('shouldResetMainSessionOnOpen only fires once for fresh BYOK handoff', () => {
+test('shouldResetMainSessionOnOpen only fires once for fresh activation handoff', () => {
   assert.equal(
     shouldResetMainSessionOnOpen({ freshSessionRequested: true, freshSessionConsumed: false }),
     true

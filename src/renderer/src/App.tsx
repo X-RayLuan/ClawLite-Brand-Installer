@@ -197,7 +197,7 @@ function App(): React.JSX.Element {
           {currentStep === 'done' && (
             <DoneStep
               botUsername={botUsername}
-              freshWebChatOnFirstOpen={!activatedViaClawRouter}
+              freshWebChatOnFirstOpen
               onTroubleshoot={() => goTo('troubleshoot')}
               onUninstallDone={() => {
                 window.electronAPI.wizard.clearState()

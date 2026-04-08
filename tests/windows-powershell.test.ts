@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 
 import {
   buildElevatedWslInstallScript,
-  buildEncodedPowerShellArgs
+  buildEncodedPowerShellArgs,
+  sanitizePowerShellErrorOutput
 } from '../src/main/services/windows-powershell.ts'
 
 test('buildElevatedWslInstallScript uses an explicit wsl.exe path and argument array', () => {
@@ -25,4 +26,13 @@ test('buildEncodedPowerShellArgs preserves the script when decoded from UTF-16LE
 
   assert.deepEqual(args.slice(0, 2), ['-NoProfile', '-EncodedCommand'])
   assert.equal(Buffer.from(args[2], 'base64').toString('utf16le'), script)
+})
+
+test('sanitizePowerShellErrorOutput removes encoded command noise and CLIXML payloads', () => {
+  const raw = `Command failed: powershell -NoProfile -EncodedCommand ABCDEFGH IJKLMNOP QRSTUVWX (exit 1)\n#< CLIXML\n<Objs Version="1.1.0.1"><Obj>noise</Obj></Objs>\nWSL install failed with code 0x80370102`
+
+  assert.equal(
+    sanitizePowerShellErrorOutput(raw),
+    'WSL install failed with code 0x80370102'
+  )
 })
