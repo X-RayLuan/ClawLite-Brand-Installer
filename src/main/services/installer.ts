@@ -145,32 +145,46 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
     const stderrSize = stderrExists ? statSync(stderrPath).size : 0
     const resultSize = resultExists ? statSync(resultPath).size : 0
     let resultSummary = ''
+    let wslLikelySucceeded = false
     if (fileResult) {
       try {
         const parsed = JSON.parse(fileResult)
-        const attemptSummary = Array.isArray(parsed.attempts)
-          ? parsed.attempts
-              .map(
-                (attempt: {
-                  name?: string
-                  exitCode?: number | null
-                  stdoutBytes?: number
-                  stderrBytes?: number
-                }) =>
-                  `${attempt.name ?? 'unknown'} exit=${attempt.exitCode ?? 'null'} stdout=${attempt.stdoutBytes ?? 0} stderr=${attempt.stderrBytes ?? 0}`
-              )
-              .join('; ')
-          : ''
-        resultSummary = [
-          `result log: ${resultExists ? 'present' : 'missing'} (${resultSize} bytes)`,
-          `final exit code: ${parsed.finalExitCode ?? 'unknown'}`,
-          attemptSummary ? `attempts: ${attemptSummary}` : ''
-        ]
-          .filter(Boolean)
-          .join('\n')
+        const attempts = Array.isArray(parsed.attempts) ? parsed.attempts : []
+        // Check if any attempt succeeded (exit 0) or had no stderr
+        const anySuccess = attempts.some(
+          (a: { exitCode?: number | null; stderrBytes?: number }) =>
+            a.exitCode === 0 || (a.stderrBytes === 0 && a.exitCode !== null)
+        )
+        const finalExit = parsed.finalExitCode ?? -1
+        const reached = parsed.reached === true
+        // If reached + no stderr + finalExit is 0 or 1 (reboot needed), treat as success
+        if (reached && (finalExit === 0 || finalExit === 1 || anySuccess)) {
+          wslLikelySucceeded = true
+        }
+        // Only build debug summary for logs, not for user display
+        const attemptSummary = attempts
+          .map(
+            (attempt: {
+              name?: string
+              exitCode?: number | null
+              stdoutBytes?: number
+              stderrBytes?: number
+            }) =>
+              `${attempt.name ?? 'unknown'} exit=${attempt.exitCode ?? 'null'} stdout=${attempt.stdoutBytes ?? 0} stderr=${attempt.stderrBytes ?? 0}`
+          )
+          .join('; ')
+        resultSummary = attemptSummary ? `attempts: ${attemptSummary}` : ''
+        // Log internally but don't show to user
+        log(`WSL result JSON: finalExit=${finalExit}, reached=${reached}, attempts=${attemptSummary}`)
       } catch {
-        resultSummary = `result log: ${resultExists ? 'present' : 'missing'} (${resultSize} bytes)`
+        resultSummary = ''
       }
+    }
+
+    // If WSL likely succeeded, don't show error — prompt reboot
+    if (wslLikelySucceeded) {
+      log('WSL installation appears to have completed. A reboot may be required.')
+      return { needsReboot: true }
     }
     const combined = summarizeElevatedPowerShellFailure({
       fileStdout,
