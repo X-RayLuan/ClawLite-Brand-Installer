@@ -146,8 +146,8 @@ export default function WslSetupStep({ wslState, onReady }: WslSetupStepProps): 
       )}
 
       {error && (
-        <div className="glass-card px-4 py-3 max-w-sm">
-          <p className="text-error text-xs">{error}</p>
+        <div className="glass-card px-4 py-3 max-w-md w-full">
+          <p className="text-error text-xs break-words overflow-wrap-anywhere whitespace-pre-wrap max-h-40 overflow-y-auto">{error}</p>
         </div>
       )}
     </div>
