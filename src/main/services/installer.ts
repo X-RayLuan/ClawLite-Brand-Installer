@@ -13,6 +13,7 @@ import {
 } from './windows-powershell'
 import { createDecodedLineCollector } from './stream-lines'
 import { decodeWindowsCommandOutput } from './windows-output-decoder'
+import { classifyWslInstallFailure } from './wsl-error-message'
 import { isLikelySuccessfulWslInstallResult, isWslRebootRequiredText } from './wsl-install-result'
 import { t } from '../../shared/i18n/main'
 
@@ -247,7 +248,7 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
         log(t('installer.ubuntuInitDone'))
         return { needsReboot: false }
       } catch {
-        throw new Error(`WSL already installed but not responding. Full error: ${combined}`)
+        throw new Error(classifyWslInstallFailure({ combined, alreadyRegistered: true }))
       }
     }
     const lower = combined.toLowerCase()
@@ -260,56 +261,35 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
       lower.includes('access denied') ||
       lower.includes('permission')
     ) {
-      throw new Error(`${t('installer.adminRequired')} - Please run the installer as Administrator.`)
+      throw new Error(classifyWslInstallFailure({ combined, alreadyRegistered: false }))
     }
     // wsl command not found (unsupported Windows version)
     if (lower.includes('not recognized') || lower.includes('not found')) {
-      throw new Error(`${t('installer.windowsVersionError')} - WSL requires Windows 10 version 1903+ or Windows 11.`)
+      throw new Error(classifyWslInstallFailure({ combined, alreadyRegistered: false }))
     }
     // Virtualization disabled
     if (lower.includes('virtualization') || lower.includes('hyper-v')) {
-      throw new Error(`${t('installer.biosVirtualization')} - Please enable Virtualization (VT-x/AMD-V) in BIOS settings.`)
+      throw new Error(classifyWslInstallFailure({ combined, alreadyRegistered: false }))
     }
     
     // Network / download failure
     if (lower.includes('download') || lower.includes('network') || lower.includes('0x800') || lower.includes('timeout')) {
-      throw new Error('WSL download failed — check your internet connection and try again. If behind a proxy, configure system proxy settings first.')
+      throw new Error(classifyWslInstallFailure({ combined, alreadyRegistered: false }))
     }
     // Windows optional features not enabled
     if (lower.includes('optional feature') || lower.includes('dism') || lower.includes('windowsoptionalfeature') || lower.includes('enable-windowsoptionalfeature')) {
-      throw new Error('Required Windows features are not enabled. Please run in an elevated PowerShell:\n  dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart\n  dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart\nThen reboot and try again.')
+      throw new Error(classifyWslInstallFailure({ combined, alreadyRegistered: false }))
     }
     // PowerShell execution policy
     if (lower.includes('execution policy') || lower.includes('is not digitally signed') || lower.includes('cannot be loaded because running scripts is disabled')) {
-      throw new Error('PowerShell execution policy is blocking the installer. Run this in an elevated PowerShell first:\n  Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned\nThen try again.')
+      throw new Error(classifyWslInstallFailure({ combined, alreadyRegistered: false }))
     }
     // Reboot required (WSL partially installed)
     if (lower.includes('reboot') || lower.includes('restart') || lower.includes('3010')) {
       log('WSL components installed but a reboot is required.')
       return { needsReboot: true }
     }
-    // Final cleanup: strip JSON blobs, non-readable lines, and internal debug info
-    const userMessage = combined
-      .split('\n')
-      .filter((line) => {
-        const t = line.trim()
-        if (!t) return false
-        // Strip JSON lines
-        if (t.startsWith('{') || t.startsWith('}') || t.startsWith('"') || t.startsWith('[')) return false
-        // Strip lines that are mostly non-ASCII
-        const nonAscii = (t.match(/[^\x20-\x7E]/g) || []).length
-        if (t.length > 5 && nonAscii > t.length * 0.3) return false
-        // Strip internal debug patterns
-        if (/^(attempts|exitCode|stdoutBytes|stderrBytes|exception|reached|finalExitCode|name)\s*:/i.test(t)) return false
-        if (/^\s*\d+\s*$/.test(t)) return false
-        return true
-      })
-      .join('\n')
-      .trim()
-
-    // If after cleanup there's nothing meaningful, give a generic message
-    const finalMessage = userMessage || 'WSL installation failed. Please try running "wsl --install" manually in an elevated PowerShell window.'
-    throw new Error(finalMessage)
+    throw new Error(classifyWslInstallFailure({ combined, alreadyRegistered: false }))
   } finally {
     rmSync(stdoutPath, { force: true })
     rmSync(stderrPath, { force: true })
