@@ -42,6 +42,20 @@ export const sanitizePowerShellErrorOutput = (raw: string): string => {
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
+    // Strip .NET exception class names and stack traces
+    .filter((line) => !line.match(/^\s*at\s+(System|Microsoft)\./i))
+    .filter((line) => !line.match(/^\s*at\s+\S+\.\S+\([^)]*\)/))
+    .map((line) =>
+      line
+        // Strip .NET exception prefixes
+        .replace(/System\.Management\.Automation\.[\w.]+Exception:\s*/g, '')
+        .replace(/ParameterBindingException[^:]*:\s*/g, '')
+        // Strip garbled replacement characters (diamond question marks)
+        .replace(/[\uFFFD]+/g, '')
+        .replace(/\?{4,}/g, '')
+        .trim()
+    )
+    .filter(Boolean)
     .filter((line) => line !== 'Command failed: powershell.exe [encoded command hidden]' || withoutCommandBlob.split('\n').filter(Boolean).length === 1)
     .join('\n')
     .trim()
@@ -54,7 +68,9 @@ export const buildElevatedWslInstallScript = (
   const innerScript = [
     "$ProgressPreference = 'SilentlyContinue'",
     "$ErrorActionPreference = 'Stop'",
-    'wsl.exe --install -d Ubuntu --no-launch',
+    `$stdoutPath = ${quotePowerShellPath(stdoutPath)}`,
+    `$stderrPath = ${quotePowerShellPath(stderrPath)}`,
+    'wsl.exe --install -d Ubuntu --no-launch 1> $stdoutPath 2> $stderrPath',
     'exit $LASTEXITCODE'
   ].join('\n')
 
@@ -65,7 +81,7 @@ export const buildElevatedWslInstallScript = (
     `  $stderrPath = ${quotePowerShellPath(stderrPath)}`,
     `  $encodedInner = '${encodePowerShellScript(innerScript)}'`,
     'try {',
-    '  $p = Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", $encodedInner) -Verb RunAs -Wait -PassThru -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath',
+    '  $p = Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", $encodedInner) -Verb RunAs -Wait -PassThru',
     '  if (Test-Path $stdoutPath) { Get-Content -Path $stdoutPath }',
     '  if (Test-Path $stderrPath) { Get-Content -Path $stderrPath }',
     '  exit $p.ExitCode',

@@ -9,14 +9,19 @@ import {
 
 test('buildElevatedWslInstallScript uses an explicit wsl.exe path and argument array', () => {
   const script = buildElevatedWslInstallScript('C:/temp/wsl.stdout.log', 'C:/temp/wsl.stderr.log')
+  const encodedInnerMatch = script.match(/\$encodedInner = '([^']+)'/)
+  assert.ok(encodedInnerMatch)
+  const innerScript = Buffer.from(encodedInnerMatch[1], 'base64').toString('utf16le')
 
   assert.match(
     script,
-    /Start-Process -FilePath "powershell\.exe" -ArgumentList @\("-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", \$encodedInner\) -Verb RunAs -Wait -PassThru -RedirectStandardOutput \$stdoutPath -RedirectStandardError \$stderrPath/
+    /Start-Process -FilePath "powershell\.exe" -ArgumentList @\("-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", \$encodedInner\) -Verb RunAs -Wait -PassThru/
   )
   assert.match(script, /\$stdoutPath = 'C:\/temp\/wsl\.stdout\.log'/)
   assert.match(script, /\$stderrPath = 'C:\/temp\/wsl\.stderr\.log'/)
   assert.match(script, /\$ProgressPreference = 'SilentlyContinue'/)
+  assert.match(innerScript, /wsl\.exe --install -d Ubuntu --no-launch 1> \$stdoutPath 2> \$stderrPath/)
+  assert.doesNotMatch(script, /-RedirectStandardOutput/)
   assert.doesNotMatch(script, /FilePath 'wsl"/)
 })
 
