@@ -1,10 +1,13 @@
-import test from 'node:test'
+import test, { mock } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { ActivationController } from '../src/main/services/activation-controller.ts'
+import {
+  ActivationController,
+  activationControllerIo
+} from '../src/main/services/activation-controller.ts'
 
 test('activation controller connects an already purchased account without exposing a raw key', async () => {
   const prevBase = process.env.CLAWLITE_ACTIVATION_API_BASE
@@ -429,5 +432,147 @@ test('injectConfig switches the default route and main agent to clawrouter witho
   } finally {
     globalThis.fetch = originalFetch
     process.env.CLAWLITE_ACTIVATION_API_BASE = prevBase
+  }
+})
+
+test('injectConfig writes clawrouter config into WSL on Windows targets', async () => {
+  const prevBase = process.env.CLAWLITE_ACTIVATION_API_BASE
+  process.env.CLAWLITE_ACTIVATION_API_BASE = 'https://clawlite.ai'
+  const originalFetch = globalThis.fetch
+
+  let writtenPath = ''
+  let writtenConfig = ''
+
+  mock.method(activationControllerIo, 'platform', () => 'win32')
+  mock.method(activationControllerIo, 'readWslFile', async (path: string) => {
+    assert.equal(path, '/root/.openclaw/openclaw.json')
+    return JSON.stringify(
+      {
+        models: {
+          mode: 'merge',
+          providers: {
+            minimax: {
+              baseUrl: 'https://api.minimax.io/anthropic',
+              apiKey: 'sk_minimax_existing',
+              api: 'anthropic-messages',
+              models: [{ id: 'MiniMax-M2.5', name: 'MiniMax M2.5' }]
+            }
+          }
+        },
+        agents: {
+          defaults: {
+            model: {
+              primary: 'minimax/MiniMax-M2.5',
+              fallbacks: ['minimax/MiniMax-M2.5']
+            }
+          },
+          list: [
+            {
+              id: 'main',
+              model: {
+                primary: 'minimax/MiniMax-M2.5',
+                fallbacks: ['minimax/MiniMax-M2.5']
+              }
+            },
+            {
+              id: 'woody',
+              model: {
+                primary: 'openai-codex/gpt-5.4',
+                fallbacks: ['minimax/MiniMax-M2.5']
+              }
+            }
+          ]
+        }
+      },
+      null,
+      2
+    )
+  })
+  mock.method(activationControllerIo, 'writeWslFile', async (path: string, content: string) => {
+    writtenPath = path
+    writtenConfig = content
+  })
+
+  try {
+    globalThis.fetch = async (input, init) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+
+      if (url.endsWith('/api/installer/activation/bootstrap')) {
+        return new Response(
+          JSON.stringify({
+            setupToken: 'stp_wsl_config_switch',
+            account: {
+              accountId: 'acct_wsl_config_switch',
+              emailMasked: 'ai***@gmail.com'
+            },
+            entitlement: { status: 'active', plan: 'clawrouter' },
+            allowedPaths: ['connect_existing_purchase', 'buy_and_connect', 'use_own_key'],
+            recommendedPath: 'connect_existing_purchase'
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+      }
+
+      if (url.endsWith('/api/installer/activation/provision')) {
+        assert.equal(init?.method, 'POST')
+        return new Response(
+          JSON.stringify({
+            provisioningState: 'bound',
+            bindingId: 'clawrouter-account:acct_wsl_config_switch',
+            credentialRef: 'credref:wsl-clawrouter',
+            provider: 'clawrouter',
+            model: 'clawrouter/claude-sonnet-4-6'
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+      }
+
+      if (url.endsWith('/api/installer/activation/inject-config')) {
+        return new Response(
+          JSON.stringify({
+            configInjectionState: 'written',
+            configTarget: '/root/.openclaw/openclaw.json',
+            patchPreview: {
+              provider: 'clawrouter',
+              credentialRef: 'credref:wsl-clawrouter',
+              model: 'clawrouter/claude-sonnet-4-6'
+            }
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+      }
+
+      throw new Error(`Unexpected fetch URL: ${url}`)
+    }
+
+    const controller = new ActivationController()
+    await controller.bootstrap({
+      installerInstanceId: 'wsl-config-switch-installer',
+      platform: 'windows',
+      appVersion: '1.3.118'
+    })
+
+    let next = await controller.startPurchase({ path: 'connect_existing_purchase' })
+    assert.equal(next.phase, 'provisioning')
+
+    next = await controller.provision({ deviceLabel: 'Windows WSL Config Test' })
+    assert.equal(next.phase, 'config_injection')
+
+    next = await controller.injectConfig({ targetConfigPath: '/root/.openclaw/openclaw.json' })
+    assert.equal(next.phase, 'validation')
+
+    assert.equal(writtenPath, '/root/.openclaw/openclaw.json')
+    const written = JSON.parse(writtenConfig)
+    assert.equal(written.models.providers.clawrouter.apiKey, 'credref:wsl-clawrouter')
+    assert.equal(written.agents.defaults.model.primary, 'clawrouter/claude-sonnet-4-6')
+    assert.deepEqual(written.agents.defaults.model.fallbacks, ['minimax/MiniMax-M2.5'])
+    assert.equal(written.agents.list[0].model.primary, 'clawrouter/claude-sonnet-4-6')
+    assert.deepEqual(written.agents.list[0].model.fallbacks, ['minimax/MiniMax-M2.5'])
+    assert.equal(written.agents.list[1].model.primary, 'openai-codex/gpt-5.4')
+    assert.deepEqual(written.agents.list[1].model.fallbacks, ['minimax/MiniMax-M2.5'])
+  } finally {
+    globalThis.fetch = originalFetch
+    process.env.CLAWLITE_ACTIVATION_API_BASE = prevBase
+    mock.restoreAll()
   }
 })

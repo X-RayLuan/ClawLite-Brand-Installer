@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { homedir } from 'os'
+import { homedir, platform } from 'os'
 import { join } from 'path'
 import type {
   ActivationBackendMode,
@@ -121,6 +121,21 @@ const getJson = async <T>(path: string): Promise<T> => {
 
   return (await response.json()) as T
 }
+
+export const activationControllerIo = {
+  platform: (): NodeJS.Platform => platform(),
+  readWslFile: async (targetPath: string): Promise<string> => {
+    const { readWslFile } = await import('./wsl-utils')
+    return readWslFile(targetPath)
+  },
+  writeWslFile: async (targetPath: string, content: string): Promise<void> => {
+    const { writeWslFile } = await import('./wsl-utils')
+    await writeWslFile(targetPath, content)
+  }
+}
+
+const isWindowsWslTargetPath = (targetPath: string): boolean =>
+  activationControllerIo.platform() === 'win32' && targetPath.startsWith('/')
 
 const defaultOffers = (): ActivationOffer[] => [
   {
@@ -544,30 +559,39 @@ export class ActivationController {
       return cloneSnapshot(snapshot)
     }
 
-    const writeConfigToDisk = (
+    const writeConfigToDisk = async (
       targetPath: string,
       patchProvider: string,
       patchCredentialRef: string,
       _patchModel: string
-    ): void => {
-      const resolved = targetPath.replace(/^~/, homedir())
-      const dir = join(resolved, '..')
-      if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-
-      // Auto-backup before modifying
-      if (existsSync(resolved)) {
-        const backupPath = `${resolved}.pre-activation.bak`
-        if (!existsSync(backupPath)) {
-          writeFileSync(backupPath, readFileSync(resolved), { mode: 0o600 })
-        }
-      }
-
+    ): Promise<void> => {
       let ocConfig: Record<string, unknown> = {}
-      if (existsSync(resolved)) {
+
+      if (isWindowsWslTargetPath(targetPath)) {
         try {
-          ocConfig = JSON.parse(readFileSync(resolved, 'utf-8'))
+          ocConfig = JSON.parse(await activationControllerIo.readWslFile(targetPath))
         } catch {
-          /* start fresh if corrupt */
+          /* start fresh if corrupt or missing */
+        }
+      } else {
+        const resolved = targetPath.replace(/^~/, homedir())
+        const dir = join(resolved, '..')
+        if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+
+        // Auto-backup before modifying
+        if (existsSync(resolved)) {
+          const backupPath = `${resolved}.pre-activation.bak`
+          if (!existsSync(backupPath)) {
+            writeFileSync(backupPath, readFileSync(resolved), { mode: 0o600 })
+          }
+        }
+
+        if (existsSync(resolved)) {
+          try {
+            ocConfig = JSON.parse(readFileSync(resolved, 'utf-8'))
+          } catch {
+            /* start fresh if corrupt */
+          }
         }
       }
 
@@ -595,12 +619,19 @@ export class ActivationController {
         setDefaultAgentModelRoute(cfg, 'clawrouter/claude-sonnet-4-6')
       }
 
-      writeFileSync(resolved, JSON.stringify(ocConfig, null, 2), { mode: 0o600 })
+      const serialized = JSON.stringify(ocConfig, null, 2)
+      if (isWindowsWslTargetPath(targetPath)) {
+        await activationControllerIo.writeWslFile(targetPath, serialized)
+        return
+      }
+
+      const resolved = targetPath.replace(/^~/, homedir())
+      writeFileSync(resolved, serialized, { mode: 0o600 })
     }
 
     if (!useRemoteActivation()) {
       try {
-        writeConfigToDisk(input.targetConfigPath, 'clawrouter', credentialRef, model)
+        await writeConfigToDisk(input.targetConfigPath, 'clawrouter', credentialRef, model)
       } catch (error) {
         snapshot.phase = 'error'
         snapshot.configInjection.status = 'failed'
@@ -641,7 +672,12 @@ export class ActivationController {
       const configTarget = remote.configTarget ?? input.targetConfigPath
 
       try {
-        writeConfigToDisk(configTarget, patchPreview.provider, patchPreview.credentialRef, patchPreview.model)
+        await writeConfigToDisk(
+          configTarget,
+          patchPreview.provider,
+          patchPreview.credentialRef,
+          patchPreview.model
+        )
       } catch (error) {
         snapshot.phase = 'error'
         snapshot.configInjection.status = 'failed'
