@@ -2,34 +2,38 @@ import { platform } from 'os'
 import { spawn } from 'child_process'
 import { findBin, getPathEnv } from './path-utils'
 import { runInWsl } from './wsl-utils'
+import {
+  buildPrepareMainSessionCommand,
+  buildResetMainSessionCommand,
+  type SessionCommand
+} from './webchat-session-command'
 
-export function getResetMainSessionCommand(): { cmd: string; args: string[]; useShellEnv: boolean } {
-  if (platform() === 'win32') {
-    return {
-      cmd: 'wsl',
-      args: ['-d', 'Ubuntu', '-u', 'root', '--', 'openclaw', 'agent', '--agent', 'main', '--message', '/reset'],
-      useShellEnv: false
-    }
-  }
-
-  return {
-    cmd: findBin('openclaw'),
-    args: ['agent', '--agent', 'main', '--message', '/reset'],
-    useShellEnv: true
-  }
+export function getResetMainSessionCommand(
+  currentPlatform: NodeJS.Platform = platform()
+): SessionCommand {
+  return buildResetMainSessionCommand(findBin('openclaw'), currentPlatform)
 }
 
-export async function resetMainSession(): Promise<void> {
-  if (platform() === 'win32') {
-    await runInWsl('openclaw agent --agent main --message "/reset"', 30000)
+export function getPrepareMainSessionCommand(
+  modelId: string,
+  currentPlatform: NodeJS.Platform = platform()
+): SessionCommand {
+  return buildPrepareMainSessionCommand(findBin('openclaw'), modelId, currentPlatform)
+}
+
+const runSessionCommand = async (
+  command: SessionCommand,
+  message: string,
+  currentPlatform: NodeJS.Platform = platform()
+): Promise<void> => {
+  if (currentPlatform === 'win32') {
+    await runInWsl(`openclaw agent --agent main --message '${message.replace(/'/g, `'\\''`)}'`, 30000)
     return
   }
 
-  const { cmd, args, useShellEnv } = getResetMainSessionCommand()
-
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(cmd, args, {
-      env: useShellEnv ? getPathEnv() : process.env
+    const child = spawn(command.cmd, command.args, {
+      env: command.useShellEnv ? getPathEnv() : process.env
     })
 
     let stderr = ''
@@ -38,8 +42,22 @@ export async function resetMainSession(): Promise<void> {
     })
     child.on('close', (code) => {
       if (code === 0) resolve()
-      else reject(new Error(stderr.trim() || `openclaw agent reset failed with exit code ${code}`))
+      else reject(new Error(stderr.trim() || `openclaw agent command failed with exit code ${code}`))
     })
     child.on('error', reject)
   })
+}
+
+export async function resetMainSession(): Promise<void> {
+  const currentPlatform = platform()
+  await runSessionCommand(getResetMainSessionCommand(currentPlatform), '/reset', currentPlatform)
+}
+
+export async function prepareMainSession(modelId: string): Promise<void> {
+  const currentPlatform = platform()
+  await runSessionCommand(
+    getPrepareMainSessionCommand(modelId, currentPlatform),
+    `/new ${modelId}`,
+    currentPlatform
+  )
 }

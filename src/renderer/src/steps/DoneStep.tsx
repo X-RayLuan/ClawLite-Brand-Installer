@@ -15,11 +15,13 @@ const UPDATE_CHECK_INTERVAL = 30 * 60 * 1000 // 30 min
 export default function DoneStep({
   botUsername,
   freshWebChatOnFirstOpen = false,
+  freshWebChatModel,
   onTroubleshoot,
   onUninstallDone
 }: {
   botUsername?: string
   freshWebChatOnFirstOpen?: boolean
+  freshWebChatModel?: string
   onTroubleshoot?: () => void
   onUninstallDone?: () => void
 }): React.JSX.Element {
@@ -163,11 +165,13 @@ export default function DoneStep({
         freshSessionConsumed
       })
     ) {
-      const resetResult = await window.electronAPI.gateway.resetMainSession()
-      if (!resetResult.success) {
+      const sessionResult = freshWebChatModel
+        ? await window.electronAPI.gateway.prepareMainSession(freshWebChatModel)
+        : await window.electronAPI.gateway.resetMainSession()
+      if (!sessionResult.success) {
         setLogs((prev) => [
           ...prev,
-          `Failed to reset Web Chat session before opening: ${resetResult.error || 'unknown error'}`
+          `Failed to prepare Web Chat session before opening: ${sessionResult.error || 'unknown error'}`
         ])
         setShowLogs(true)
       } else {

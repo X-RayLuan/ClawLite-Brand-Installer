@@ -22,7 +22,7 @@ import {
   getGatewayStatus,
   setGatewayLogCallback
 } from './services/gateway'
-import { resetMainSession } from './services/webchat-session'
+import { prepareMainSession, resetMainSession } from './services/webchat-session'
 import { checkWslState } from './services/wsl-utils'
 import { checkForUpdates, downloadUpdate, installUpdate } from './services/updater'
 import { uninstallOpenClaw } from './services/uninstaller'
@@ -322,6 +322,14 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
   ipcMain.handle('gateway:reset-main-session', async () => {
     try {
       await resetMainSession()
+      return { success: true }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+  ipcMain.handle('gateway:prepare-main-session', async (_event, modelId: string) => {
+    try {
+      await prepareMainSession(modelId)
       return { success: true }
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : String(e) }

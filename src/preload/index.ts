@@ -96,6 +96,8 @@ const electronAPI = {
     status: (): Promise<'running' | 'stopped'> => ipcRenderer.invoke('gateway:status'),
     resetMainSession: (): Promise<{ success: boolean; error?: string }> =>
       ipcRenderer.invoke('gateway:reset-main-session'),
+    prepareMainSession: (modelId: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('gateway:prepare-main-session', modelId),
     onLog: (cb: (msg: string) => void): (() => void) => {
       const handler = (_: unknown, msg: string): void => cb(msg)
       ipcRenderer.on('gateway:log', handler)

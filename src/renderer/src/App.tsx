@@ -210,6 +210,9 @@ function App(): React.JSX.Element {
             <DoneStep
               botUsername={botUsername}
               freshWebChatOnFirstOpen
+              freshWebChatModel={
+                activatedViaClawRouter ? 'clawrouter/claude-sonnet-4-6' : modelId
+              }
               onTroubleshoot={() => goTo('troubleshoot')}
               onUninstallDone={() => {
                 window.electronAPI.wizard.clearState()
