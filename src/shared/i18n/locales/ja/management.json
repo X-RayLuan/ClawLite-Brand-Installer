@@ -22,7 +22,14 @@
     "delete": "削除",
     "restartingGw": "Gatewayを再起動中...",
     "errorPrefix": "[エラー] {{msg}}",
-    "settingsBackup": "設定のバックアップ"
+    "settingsBackup": "設定のバックアップ",
+    "webChatPreparing": "Web Chat を準備中...",
+    "webChatPreparingSession": "新しいセッションを準備しています",
+    "webChatCheckingGateway": "Gateway の状態を確認しています",
+    "webChatOpening": "Web Chat を開いています...",
+    "webChatOpeningBrowser": "ローカル OpenClaw ダッシュボードを起動しています",
+    "webChatGatewaySlow": "Gateway の応答が遅いため、そのままダッシュボードを開きます...",
+    "webChatStepProgress": "ステップ {{current}}/{{total}}"
   },
   "uninstall": {
     "title": "OpenClawの削除",

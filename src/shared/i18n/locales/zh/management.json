@@ -22,7 +22,14 @@
     "delete": "删除",
     "restartingGw": "正在重启 Gateway...",
     "errorPrefix": "[错误] {{msg}}",
-    "settingsBackup": "配置备份"
+    "settingsBackup": "配置备份",
+    "webChatPreparing": "正在准备 Web Chat...",
+    "webChatPreparingSession": "正在准备新的会话",
+    "webChatCheckingGateway": "正在检查 Gateway 状态",
+    "webChatOpening": "正在打开 Web Chat...",
+    "webChatOpeningBrowser": "正在打开本地 OpenClaw 面板",
+    "webChatGatewaySlow": "Gateway 响应较慢，仍将继续打开面板...",
+    "webChatStepProgress": "第 {{current}}/{{total}} 步"
   },
   "uninstall": {
     "title": "删除 OpenClaw",

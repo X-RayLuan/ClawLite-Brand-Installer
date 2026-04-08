@@ -9,6 +9,7 @@ import ProviderSwitchModal from '../components/ProviderSwitchModal'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { useManagement } from '../hooks/useManagement'
 import { buildWebChatUrl, shouldResetMainSessionOnOpen } from './webchat-launch'
+import { describeWebChatOpenState, type WebChatOpenStage } from './webchat-open-state'
 
 const UPDATE_CHECK_INTERVAL = 30 * 60 * 1000 // 30 min
 
@@ -38,6 +39,7 @@ export default function DoneStep({
   const [hasTelegram, setHasTelegram] = useState(false)
   const [installerVersion, setInstallerVersion] = useState<string>('')
   const [freshSessionConsumed, setFreshSessionConsumed] = useState(false)
+  const [webChatOpenStage, setWebChatOpenStage] = useState<WebChatOpenStage | null>(null)
 
   // OpenClaw update state
   const [openclawUpdate, setOpenclawUpdate] = useState<{
@@ -131,76 +133,89 @@ export default function DoneStep({
     loadCurrentConfig()
   }, [loadCurrentConfig])
 
+  const webChatOpenState = webChatOpenStage ? describeWebChatOpenState(webChatOpenStage) : null
+
   const openWebChat = async (): Promise<void> => {
-    // Avoid stale UI state blocking WebChat: verify live gateway status once
-    if (status !== 'running') {
-      const s = await window.electronAPI.gateway.status()
-      if (s === 'running') {
-        setStatus('running')
-      } else {
-        setLogs((prev) => [...prev, 'Gateway is still starting. Trying to open Web Chat anyway...'])
+    setWebChatOpenStage('preparing_session')
+
+    try {
+      // Avoid stale UI state blocking WebChat: verify live gateway status once
+      if (status !== 'running') {
+        const s = await window.electronAPI.gateway.status()
+        if (s === 'running') {
+          setStatus('running')
+        } else {
+          setLogs((prev) => [...prev, 'Gateway is still starting. Trying to open Web Chat anyway...'])
+        }
       }
-    }
 
-    let token = gatewayToken
+      let token = gatewayToken
 
-    // Re-read config once to avoid race where token is written slightly later
-    if (!token) {
-      const r = await window.electronAPI.config.read()
-      if (r.success && r.config?.gatewayToken) {
-        token = r.config.gatewayToken
-        setGatewayToken(token)
+      // Re-read config once to avoid race where token is written slightly later
+      if (!token) {
+        const r = await window.electronAPI.config.read()
+        if (r.success && r.config?.gatewayToken) {
+          token = r.config.gatewayToken
+          setGatewayToken(token)
+        }
       }
-    }
 
-    if (!token) {
-      setLogs((prev) => [...prev, 'Web Chat token missing. Please re-run setup or switch provider.'])
-      setShowLogs(true)
-      return
-    }
+      if (!token) {
+        setLogs((prev) => [...prev, 'Web Chat token missing. Please re-run setup or switch provider.'])
+        setShowLogs(true)
+        return
+      }
 
-    if (
-      shouldResetMainSessionOnOpen({
-        freshSessionRequested: freshWebChatOnFirstOpen,
-        freshSessionConsumed
-      })
-    ) {
-      const sessionResult = freshWebChatModel
-        ? await window.electronAPI.gateway.prepareMainSession(freshWebChatModel)
-        : await window.electronAPI.gateway.resetMainSession()
-      if (!sessionResult.success) {
-        setLogs((prev) => [
-          ...prev,
-          `Failed to prepare Web Chat session before opening: ${sessionResult.error || 'unknown error'}`
-        ])
+      if (
+        shouldResetMainSessionOnOpen({
+          freshSessionRequested: freshWebChatOnFirstOpen,
+          freshSessionConsumed
+        })
+      ) {
+        const sessionResult = freshWebChatModel
+          ? await window.electronAPI.gateway.prepareMainSession(freshWebChatModel)
+          : await window.electronAPI.gateway.resetMainSession()
+        if (!sessionResult.success) {
+          setLogs((prev) => [
+            ...prev,
+            `Failed to prepare Web Chat session before opening: ${sessionResult.error || 'unknown error'}`
+          ])
+          setShowLogs(true)
+        } else {
+          setFreshSessionConsumed(true)
+        }
+      }
+
+      setWebChatOpenStage('checking_gateway')
+
+      // Preflight readiness retry (2~5s)
+      let ready = false
+      for (let i = 0; i < 6; i++) {
+        try {
+          const res = await fetch('http://127.0.0.1:18789/', { method: 'GET' })
+          if (res.ok || res.status > 0) {
+            ready = true
+            break
+          }
+        } catch {
+          /* retry */
+        }
+        await new Promise((r) => setTimeout(r, 500))
+      }
+
+      if (!ready) {
+        setWebChatOpenStage('gateway_slow')
+        setLogs((prev) => [...prev, 'Gateway health check is slow; opening Web Chat URL directly...'])
         setShowLogs(true)
       } else {
-        setFreshSessionConsumed(true)
+        setWebChatOpenStage('opening')
       }
-    }
 
-    // Preflight readiness retry (2~5s)
-    let ready = false
-    for (let i = 0; i < 6; i++) {
-      try {
-        const res = await fetch('http://127.0.0.1:18789/', { method: 'GET' })
-        if (res.ok || res.status > 0) {
-          ready = true
-          break
-        }
-      } catch {
-        /* retry */
-      }
-      await new Promise((r) => setTimeout(r, 500))
+      const url = buildWebChatUrl(token)
+      window.electronAPI.system.openExternal(url)
+    } finally {
+      setWebChatOpenStage(null)
     }
-
-    if (!ready) {
-      setLogs((prev) => [...prev, 'Gateway health check is slow; opening Web Chat URL directly...'])
-      setShowLogs(true)
-    }
-
-    const url = buildWebChatUrl(token)
-    window.electronAPI.system.openExternal(url)
   }
 
   const toggleAutoLaunch = async (): Promise<void> => {
@@ -512,12 +527,40 @@ export default function DoneStep({
       <div className="w-full max-w-md">
         <button
           onClick={openWebChat}
-          className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-xl cursor-pointer bg-white/5 border border-glass-border hover:border-primary/40 hover:bg-white/8 transition-all duration-200"
+          disabled={Boolean(webChatOpenState)}
+          className="w-full flex items-center gap-2.5 px-4 py-2.5 rounded-xl cursor-pointer bg-white/5 border border-glass-border hover:border-primary/40 hover:bg-white/8 transition-all duration-200 disabled:opacity-70 disabled:cursor-wait"
         >
-          <span className="text-lg">🌐</span>
+          {webChatOpenState ? (
+            <svg className="animate-spin h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+              <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <span className="text-lg">🌐</span>
+          )}
           <div className="flex-1 text-left">
-            <span className="text-sm font-bold">Web Chat</span>
-            <p className="text-[11px] text-text-muted/70">Open local OpenClaw dashboard</p>
+            <span className="text-sm font-bold">
+              {webChatOpenState ? t(webChatOpenState.summaryKey) : 'Web Chat'}
+            </span>
+            <p className="text-[11px] text-text-muted/70">
+              {webChatOpenState ? t(webChatOpenState.detailKey) : 'Open local OpenClaw dashboard'}
+            </p>
+            {webChatOpenState && (
+              <div className="mt-2">
+                <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-300"
+                    style={{ width: `${(webChatOpenState.progressStep / webChatOpenState.progressTotal) * 100}%` }}
+                  />
+                </div>
+                <p className="mt-1 text-[10px] text-text-muted/60">
+                  {t('done.webChatStepProgress', {
+                    current: webChatOpenState.progressStep,
+                    total: webChatOpenState.progressTotal
+                  })}
+                </p>
+              </div>
+            )}
           </div>
         </button>
       </div>

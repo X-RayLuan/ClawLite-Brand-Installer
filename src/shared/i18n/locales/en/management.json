@@ -22,7 +22,14 @@
     "delete": "Delete",
     "restartingGw": "Restarting Gateway...",
     "errorPrefix": "[Error] {{msg}}",
-    "settingsBackup": "Settings Backup"
+    "settingsBackup": "Settings Backup",
+    "webChatPreparing": "Preparing Web Chat...",
+    "webChatPreparingSession": "Setting up a fresh session",
+    "webChatCheckingGateway": "Checking gateway readiness",
+    "webChatOpening": "Opening Web Chat...",
+    "webChatOpeningBrowser": "Launching the local OpenClaw dashboard",
+    "webChatGatewaySlow": "Gateway is slow. Opening the dashboard anyway...",
+    "webChatStepProgress": "Step {{current}}/{{total}}"
   },
   "uninstall": {
     "title": "Uninstall OpenClaw",
