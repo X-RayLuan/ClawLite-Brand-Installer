@@ -56,6 +56,18 @@ export const sanitizePowerShellErrorOutput = (raw: string): string => {
         .trim()
     )
     .filter(Boolean)
+    // Strip PowerShell internal exception metadata lines
+    .filter((line) => !line.match(/^\s*\+\s*CategoryInfo/i))
+    .filter((line) => !line.match(/^\s*\+\s*FullyQualifiedErrorId/i))
+    .filter((line) => !line.match(/RemoteException/i))
+    .filter((line) => !line.match(/NativeCommandError/i))
+    .filter((line) => !line.match(/^\s*\+\s*~+\s*$/))
+    .filter((line) => !line.match(/^\s*所在位置.*行:\d+.*字符/i))
+    // Strip garbled short blobs (non-ASCII heavy lines with little readable content)
+    .filter((line) => {
+      const nonAscii = (line.match(/[^\x20-\x7E]/g) || []).length
+      return nonAscii < line.length * 0.5 || line.length < 10
+    })
     .filter((line) => line !== 'Command failed: powershell.exe [encoded command hidden]' || withoutCommandBlob.split('\n').filter(Boolean).length === 1)
     .join('\n')
     .trim()
@@ -119,6 +131,7 @@ export const buildElevatedWslInstallScript = (
     "$OutputEncoding = [System.Text.Encoding]::UTF8",
     "$ProgressPreference = 'SilentlyContinue'",
     "$ErrorActionPreference = 'Continue'",
+    '$PSNativeCommandUseErrorActionPreference = $false',
     `$stdoutPath = ${quotePowerShellPath(stdoutPath)}`,
     `$stderrPath = ${quotePowerShellPath(stderrPath)}`,
     `$resultPath = ${quotePowerShellPath(resultPath)}`,
@@ -140,10 +153,11 @@ export const buildElevatedWslInstallScript = (
     '    exception = $null',
     '  }',
     '  try {',
-    '    $out = & wsl.exe @($attempt.args) 2>&1 | Out-String',
+    '    if (Test-Path $stdoutPath) { Remove-Item $stdoutPath -Force }',
+    '    if (Test-Path $stderrPath) { Remove-Item $stderrPath -Force }',
+    '    & wsl.exe @($attempt.args) 1> $stdoutPath 2> $stderrPath',
     '    $wslExitCode = $LASTEXITCODE',
     '    $entry.exitCode = $wslExitCode',
-    '    [System.IO.File]::WriteAllText($stdoutPath, $out, [System.Text.Encoding]::UTF8)',
     '  } catch {',
     '    $wslExitCode = 1',
     '    $entry.exitCode = 1',
