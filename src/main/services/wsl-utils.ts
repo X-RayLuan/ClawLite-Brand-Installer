@@ -1,5 +1,6 @@
 import { spawn } from 'child_process'
 import { posix as pathPosix } from 'path'
+import { detectWslStateFromOutputs } from './wsl-state-detection'
 
 export type WslState =
   | 'not_available'
@@ -37,22 +38,26 @@ const runCmd = (cmd: string, args: string[], timeout = 15000): Promise<string> =
   })
 
 export const checkWslState = async (): Promise<WslState> => {
+  let versionOk = false
   // Check WSL availability (--version only supported on Store WSL)
   try {
     await runCmd('wsl', ['--version'])
+    versionOk = true
   } catch {
     // Inbox WSL doesn't support --version → re-check by verifying wsl.exe exists
     try {
       await runCmd('where', ['wsl'])
+      versionOk = true
     } catch {
       return 'not_available'
     }
   }
 
+  let statusOutput = ''
   // Check if reboot is needed via wsl --status
   try {
-    const status = await runCmd('wsl', ['--status'])
-    if (status.includes('reboot') || status.includes('restart')) {
+    statusOutput = await runCmd('wsl', ['--status'])
+    if (statusOutput.includes('reboot') || statusOutput.includes('restart')) {
       return 'needs_reboot'
     }
   } catch {
@@ -60,23 +65,24 @@ export const checkWslState = async (): Promise<WslState> => {
     // Proceed with additional check via wsl --list
   }
 
+  let listOutput = ''
   // Check if any Ubuntu distro exists
   try {
-    const list = await runCmd('wsl', ['--list', '--quiet'])
-    const distros = list
-      .split('\n')
-      .map((s) => s.trim())
-      .filter(Boolean)
+    listOutput = await runCmd('wsl', ['--list', '--quiet'])
+    const distros = listOutput.split('\n').map((s) => s.trim()).filter(Boolean)
     const ubuntuDistro = distros.find((d) => /^ubuntu/i.test(d)) || distros.find((d) => d === WSL_DISTRO)
-    if (!ubuntuDistro) {
-      return 'no_distro'
-    }
+    if (!ubuntuDistro) return 'no_distro'
     // Verify distro is registered and working properly
     try {
       await runCmd('wsl', ['-d', ubuntuDistro, '-u', WSL_USER, '--', 'echo', 'ok'])
       return 'ready'
-    } catch {
-      return 'not_initialized'
+    } catch (error) {
+      return detectWslStateFromOutputs({
+        versionOk,
+        statusOutput,
+        listOutput,
+        distroLaunchError: error instanceof Error ? error.message : ''
+      })
     }
   } catch {
     // --list failed → WSL installed but not yet initialized
