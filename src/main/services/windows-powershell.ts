@@ -61,6 +61,47 @@ export const sanitizePowerShellErrorOutput = (raw: string): string => {
     .trim()
 }
 
+export const summarizeElevatedPowerShellFailure = ({
+  fileStdout,
+  fileStderr,
+  errLines,
+  errMsg,
+  stdoutExists,
+  stderrExists,
+  stdoutSize,
+  stderrSize
+}: {
+  fileStdout: string
+  fileStderr: string
+  errLines: string
+  errMsg: string
+  stdoutExists: boolean
+  stderrExists: boolean
+  stdoutSize: number
+  stderrSize: number
+}): string => {
+  const childOutput = sanitizePowerShellErrorOutput(
+    [fileStdout, fileStderr, errLines].filter(Boolean).join('\n')
+  )
+
+  if (childOutput) {
+    return childOutput
+  }
+
+  const parentOutput = sanitizePowerShellErrorOutput(errMsg)
+  const lines = [
+    'No elevated PowerShell output was captured.',
+    `stdout log: ${stdoutExists ? 'present' : 'missing'} (${stdoutSize} bytes)`,
+    `stderr log: ${stderrExists ? 'present' : 'missing'} (${stderrSize} bytes)`
+  ]
+
+  if (parentOutput && parentOutput !== 'Command failed: powershell.exe [encoded command hidden]') {
+    lines.push(`parent error: ${parentOutput}`)
+  }
+
+  return lines.join('\n')
+}
+
 export const buildElevatedWslInstallScript = (
   stdoutPath: string,
   stderrPath: string

@@ -9,7 +9,7 @@ import { getPathEnv } from './path-utils'
 import {
   buildElevatedWslInstallScript,
   buildEncodedPowerShellArgs,
-  sanitizePowerShellErrorOutput
+  summarizeElevatedPowerShellFailure
 } from './windows-powershell'
 import { createDecodedLineCollector } from './stream-lines'
 import { t } from '../../shared/i18n/main'
@@ -140,13 +140,23 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
     }
     const fileStdout = readWithBom(stdoutPath)
     const fileStderr = readWithBom(stderrPath)
-    const fileOutput = (fileStdout + '\n' + fileStderr).trim()
-
     const errMsg = err instanceof Error ? err.message : ''
     const errLines = ((err as RunError).lines ?? []).join('\n')
-    const childOutput = sanitizePowerShellErrorOutput(fileOutput || errLines)
-    const parentOutput = sanitizePowerShellErrorOutput(errMsg)
-    const combined = childOutput || parentOutput
+    const stdoutExists = existsSync(stdoutPath)
+    const stderrExists = existsSync(stderrPath)
+    const { statSync } = require('fs')
+    const stdoutSize = stdoutExists ? statSync(stdoutPath).size : 0
+    const stderrSize = stderrExists ? statSync(stderrPath).size : 0
+    const combined = summarizeElevatedPowerShellFailure({
+      fileStdout,
+      fileStderr,
+      errLines,
+      errMsg,
+      stdoutExists,
+      stderrExists,
+      stdoutSize,
+      stderrSize
+    })
 
     // Check if WSL actually completed despite stderr noise
     if (combined.toLowerCase().includes('completed') || combined.toLowerCase().includes('successfully')) {

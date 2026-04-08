@@ -4,7 +4,8 @@ import assert from 'node:assert/strict'
 import {
   buildElevatedWslInstallScript,
   buildEncodedPowerShellArgs,
-  sanitizePowerShellErrorOutput
+  sanitizePowerShellErrorOutput,
+  summarizeElevatedPowerShellFailure
 } from '../src/main/services/windows-powershell.ts'
 
 test('buildElevatedWslInstallScript uses an explicit wsl.exe path and argument array', () => {
@@ -43,4 +44,22 @@ test('sanitizePowerShellErrorOutput removes encoded command noise and CLIXML pay
     sanitizePowerShellErrorOutput(raw),
     'WSL install failed with code 0x80370102'
   )
+})
+
+test('summarizeElevatedPowerShellFailure reports missing child output instead of only encoded command noise', () => {
+  const summary = summarizeElevatedPowerShellFailure({
+    fileStdout: '',
+    fileStderr: '',
+    errLines: '',
+    errMsg: 'Command failed: powershell.exe -NoProfile -EncodedCommand ABCDEFGH (exit 1)',
+    stdoutExists: false,
+    stderrExists: false,
+    stdoutSize: 0,
+    stderrSize: 0
+  })
+
+  assert.match(summary, /No elevated PowerShell output was captured/i)
+  assert.match(summary, /stdout log: missing \(0 bytes\)/i)
+  assert.match(summary, /stderr log: missing \(0 bytes\)/i)
+  assert.doesNotMatch(summary, /\[encoded command hidden\]$/)
 })
