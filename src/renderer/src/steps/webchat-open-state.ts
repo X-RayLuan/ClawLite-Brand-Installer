@@ -5,12 +5,12 @@ export type WebChatOpenStage =
   | 'gateway_slow'
 
 export function getWebChatReadinessPlan(): {
-  attempts: number
   delayMs: number
+  postOpenDelayMs: number
 } {
   return {
-    attempts: 120,
-    delayMs: 500
+    delayMs: 500,
+    postOpenDelayMs: 5000
   }
 }
 

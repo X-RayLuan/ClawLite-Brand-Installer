@@ -196,8 +196,8 @@ export default function DoneStep({
       const readinessPlan = getWebChatReadinessPlan()
       let gatewayStatus: 'running' | 'stopped' = status === 'running' ? 'running' : 'stopped'
 
-      // The main process already owns gateway readiness detection; avoid a renderer HTTP probe here.
-      for (let i = 0; i < readinessPlan.attempts && !shouldOpenWebChatForGatewayStatus(gatewayStatus); i++) {
+      // The main process already owns gateway readiness detection; keep waiting instead of timing out.
+      while (!shouldOpenWebChatForGatewayStatus(gatewayStatus)) {
         gatewayStatus = await window.electronAPI.gateway.status()
         if (shouldOpenWebChatForGatewayStatus(gatewayStatus)) {
           setStatus('running')
@@ -206,16 +206,10 @@ export default function DoneStep({
         await new Promise((r) => setTimeout(r, readinessPlan.delayMs))
       }
 
-      if (!shouldOpenWebChatForGatewayStatus(gatewayStatus)) {
-        setWebChatOpenStage('gateway_slow')
-        setLogs((prev) => [...prev, 'Gateway did not become ready within 60 seconds. Please restart Gateway and try again.'])
-        setShowLogs(true)
-        return
-      }
-
       setWebChatOpenStage('opening')
       const url = buildWebChatUrl(token)
       window.electronAPI.system.openExternal(url)
+      await new Promise((r) => setTimeout(r, readinessPlan.postOpenDelayMs))
     } finally {
       setWebChatOpenStage(null)
     }

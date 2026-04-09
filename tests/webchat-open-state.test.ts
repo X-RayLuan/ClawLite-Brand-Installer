@@ -49,10 +49,10 @@ test('describeWebChatOpenState keeps slow gateway startup in the loading state',
   )
 })
 
-test('getWebChatReadinessPlan keeps the installer loading while Windows gateway startup completes', () => {
+test('getWebChatReadinessPlan keeps polling without a fixed timeout and delays loading completion after launch', () => {
   assert.deepEqual(getWebChatReadinessPlan(), {
-    attempts: 120,
-    delayMs: 500
+    delayMs: 500,
+    postOpenDelayMs: 5000
   })
 })
 
