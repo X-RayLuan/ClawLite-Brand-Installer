@@ -195,7 +195,7 @@ export async function openWebChatWindow(
           win.webContents.once('did-fail-load', handleBootstrapFail)
         })
         await win.webContents.executeJavaScript(bootstrapScript)
-        await win.loadURL(probeUrl)
+        await win.loadURL(url)
       } else {
         await win.loadURL(url)
       }

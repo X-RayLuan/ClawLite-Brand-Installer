@@ -145,7 +145,10 @@ test('openWebChatWindow seeds control ui storage before the final load when gate
   assert.match(win.webContents.executedScripts[0] || '', /openclaw\.control\.settings\.v1/)
   assert.match(win.webContents.executedScripts[0] || '', /ws:\/\/127\.0\.0\.1:18789/)
   assert.match(win.webContents.executedScripts[0] || '', /test-token/)
-  assert.deepEqual(win.loadedUrls, ['http://127.0.0.1:18791/', 'http://127.0.0.1:18791/'])
+  assert.deepEqual(win.loadedUrls, [
+    'http://127.0.0.1:18791/',
+    'http://127.0.0.1:18791/#gatewayUrl=ws%3A%2F%2F127.0.0.1%3A18789&token=test-token'
+  ])
 
   win.webContents.emit('did-finish-load')
   const result = await resultPromise
