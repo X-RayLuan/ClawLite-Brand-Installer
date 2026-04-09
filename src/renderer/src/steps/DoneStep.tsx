@@ -207,9 +207,9 @@ export default function DoneStep({
       }
 
       setWebChatOpenStage('opening')
+      await new Promise((r) => setTimeout(r, readinessPlan.preOpenDelayMs))
       const url = buildWebChatUrl(token)
       window.electronAPI.system.openExternal(url)
-      await new Promise((r) => setTimeout(r, readinessPlan.postOpenDelayMs))
     } finally {
       setWebChatOpenStage(null)
     }

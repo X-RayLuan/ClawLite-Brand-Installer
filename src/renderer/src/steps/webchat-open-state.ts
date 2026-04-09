@@ -6,11 +6,11 @@ export type WebChatOpenStage =
 
 export function getWebChatReadinessPlan(): {
   delayMs: number
-  postOpenDelayMs: number
+  preOpenDelayMs: number
 } {
   return {
     delayMs: 500,
-    postOpenDelayMs: 5000
+    preOpenDelayMs: 5000
   }
 }
 
