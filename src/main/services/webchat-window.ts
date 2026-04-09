@@ -11,7 +11,9 @@ interface WebChatWindowDeps {
 }
 
 interface BrowserWindowLike extends ElectronBrowserWindow {
-  executeJavaScript?: (code: string) => Promise<unknown>
+  webContents: ElectronBrowserWindow['webContents'] & {
+    executeJavaScript?: (code: string) => Promise<unknown>
+  }
 }
 
 let webChatWindow: ElectronBrowserWindow | null = null
@@ -173,7 +175,7 @@ export async function openWebChatWindow(
         return
       }
 
-      if (bootstrapScript && typeof win.executeJavaScript === 'function') {
+      if (bootstrapScript && typeof win.webContents.executeJavaScript === 'function') {
         await win.loadURL(probeUrl)
         await new Promise<void>((bootstrapResolve, bootstrapReject) => {
           const handleBootstrapLoad = (): void => {
@@ -192,7 +194,7 @@ export async function openWebChatWindow(
           win.webContents.once('did-finish-load', handleBootstrapLoad)
           win.webContents.once('did-fail-load', handleBootstrapFail)
         })
-        await win.executeJavaScript(bootstrapScript)
+        await win.webContents.executeJavaScript(bootstrapScript)
         await win.loadURL(probeUrl)
       } else {
         await win.loadURL(url)

@@ -4,7 +4,14 @@ import { EventEmitter } from 'node:events'
 
 import { openWebChatWindow, resetWebChatWindowForTests } from '../src/main/services/webchat-window.ts'
 
-class FakeWebContents extends EventEmitter {}
+class FakeWebContents extends EventEmitter {
+  executedScripts: string[] = []
+
+  executeJavaScript(script: string): Promise<void> {
+    this.executedScripts.push(script)
+    return Promise.resolve()
+  }
+}
 
 class FakeBrowserWindow extends EventEmitter {
   static instances: FakeBrowserWindow[] = []
@@ -13,7 +20,6 @@ class FakeBrowserWindow extends EventEmitter {
   focused = false
   loadedUrl: string | null = null
   loadedUrls: string[] = []
-  executedScripts: string[] = []
   destroyed = false
 
   constructor(_options: unknown) {
@@ -26,12 +32,6 @@ class FakeBrowserWindow extends EventEmitter {
     this.loadedUrls.push(url)
     return Promise.resolve()
   }
-
-  executeJavaScript(script: string): Promise<void> {
-    this.executedScripts.push(script)
-    return Promise.resolve()
-  }
-
   show(): void {
     this.shown = true
   }
@@ -140,10 +140,10 @@ test('openWebChatWindow seeds control ui storage before the final load when gate
   win.webContents.emit('did-finish-load')
   await new Promise((resolve) => setImmediate(resolve))
 
-  assert.equal(win.executedScripts.length, 1)
-  assert.match(win.executedScripts[0] || '', /openclaw\.control\.settings\.v1/)
-  assert.match(win.executedScripts[0] || '', /ws:\/\/127\.0\.0\.1:18789/)
-  assert.match(win.executedScripts[0] || '', /test-token/)
+  assert.equal(win.webContents.executedScripts.length, 1)
+  assert.match(win.webContents.executedScripts[0] || '', /openclaw\.control\.settings\.v1/)
+  assert.match(win.webContents.executedScripts[0] || '', /ws:\/\/127\.0\.0\.1:18789/)
+  assert.match(win.webContents.executedScripts[0] || '', /test-token/)
   assert.deepEqual(win.loadedUrls, ['http://127.0.0.1:18791/', 'http://127.0.0.1:18791/'])
 
   win.webContents.emit('did-finish-load')
