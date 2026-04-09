@@ -4,6 +4,16 @@ export type WebChatOpenStage =
   | 'opening'
   | 'gateway_slow'
 
+export function getWebChatReadinessPlan(): {
+  attempts: number
+  delayMs: number
+} {
+  return {
+    attempts: 20,
+    delayMs: 500
+  }
+}
+
 export function describeWebChatOpenState(stage: WebChatOpenStage): {
   stage: WebChatOpenStage
   summaryKey: string

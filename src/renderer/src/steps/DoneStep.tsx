@@ -9,7 +9,7 @@ import ProviderSwitchModal from '../components/ProviderSwitchModal'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { useManagement } from '../hooks/useManagement'
 import { buildWebChatUrl, shouldResetMainSessionOnOpen } from './webchat-launch'
-import { describeWebChatOpenState, type WebChatOpenStage } from './webchat-open-state'
+import { describeWebChatOpenState, getWebChatReadinessPlan, type WebChatOpenStage } from './webchat-open-state'
 
 const UPDATE_CHECK_INTERVAL = 30 * 60 * 1000 // 30 min
 
@@ -188,9 +188,11 @@ export default function DoneStep({
 
       setWebChatOpenStage('checking_gateway')
 
-      // Preflight readiness retry (2~5s)
+      const readinessPlan = getWebChatReadinessPlan()
+
+      // Wait for the local WebChat endpoint before opening to avoid a blank first page.
       let ready = false
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < readinessPlan.attempts; i++) {
         try {
           const res = await fetch('http://127.0.0.1:18789/', { method: 'GET' })
           if (res.ok || res.status > 0) {
@@ -200,7 +202,7 @@ export default function DoneStep({
         } catch {
           /* retry */
         }
-        await new Promise((r) => setTimeout(r, 500))
+        await new Promise((r) => setTimeout(r, readinessPlan.delayMs))
       }
 
       if (!ready) {

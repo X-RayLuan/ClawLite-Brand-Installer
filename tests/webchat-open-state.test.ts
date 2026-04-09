@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   describeWebChatOpenState,
+  getWebChatReadinessPlan,
   type WebChatOpenStage
 } from '../src/renderer/src/steps/webchat-open-state.ts'
 
@@ -45,4 +46,11 @@ test('describeWebChatOpenState keeps the timeout fallback user-facing and non-fa
     describeWebChatOpenState('gateway_slow'),
     expected('gateway_slow', 'done.webChatOpening', 'done.webChatGatewaySlow', 3)
   )
+})
+
+test('getWebChatReadinessPlan waits long enough to avoid opening a blank Web Chat during gateway startup', () => {
+  assert.deepEqual(getWebChatReadinessPlan(), {
+    attempts: 20,
+    delayMs: 500
+  })
 })
