@@ -10,6 +10,10 @@ interface WebChatWindowDeps {
   waitForUrlReady?: (url: string, timeoutMs: number) => Promise<boolean>
 }
 
+interface BrowserWindowLike extends ElectronBrowserWindow {
+  executeJavaScript?: (code: string) => Promise<unknown>
+}
+
 let webChatWindow: ElectronBrowserWindow | null = null
 
 const DEFAULT_TIMEOUT_MS = 60000
@@ -45,6 +49,38 @@ function toProbeUrl(url: string): string {
   const parsed = new URL(url)
   parsed.hash = ''
   return parsed.toString()
+}
+
+function normalizeGatewayUrlKey(url: string): string {
+  const parsed = new URL(url)
+  const normalizedPath = parsed.pathname === '/' ? '' : parsed.pathname.replace(/\/+$/, '') || parsed.pathname
+  return `${parsed.protocol}//${parsed.host}${normalizedPath}`
+}
+
+function buildControlUiBootstrapScript(url: string): string | null {
+  const parsed = new URL(url)
+  const hashParams = new URLSearchParams(parsed.hash.startsWith('#') ? parsed.hash.slice(1) : parsed.hash)
+  const gatewayUrl = hashParams.get('gatewayUrl')?.trim()
+  const token = hashParams.get('token')?.trim()
+  if (!gatewayUrl || !token) {
+    return null
+  }
+
+  const normalizedGatewayUrl = normalizeGatewayUrlKey(gatewayUrl)
+  const tokenKey = `openclaw.control.token.v1:${normalizedGatewayUrl}`
+  const settingsKey = `openclaw.control.settings.v1:${normalizedGatewayUrl}`
+  const settingsValue = JSON.stringify({
+    gatewayUrl: normalizedGatewayUrl,
+    sessionKey: 'main',
+    lastActiveSessionKey: 'main'
+  })
+
+  return `
+    localStorage.removeItem('openclaw.control.token.v1');
+    localStorage.setItem(${JSON.stringify(tokenKey)}, ${JSON.stringify(token)});
+    localStorage.setItem(${JSON.stringify(settingsKey)}, ${JSON.stringify(settingsValue)});
+    localStorage.setItem('openclaw.control.settings.v1', ${JSON.stringify(settingsValue)});
+  `
 }
 
 async function defaultWaitForUrlReady(url: string, timeoutMs: number): Promise<boolean> {
@@ -89,9 +125,11 @@ export async function openWebChatWindow(
   url: string,
   deps: WebChatWindowDeps
 ): Promise<{ success: boolean; error?: string }> {
-  const win = createWindow(deps.BrowserWindow)
+  const win = createWindow(deps.BrowserWindow) as BrowserWindowLike
   const timeoutMs = deps.timeoutMs ?? DEFAULT_TIMEOUT_MS
   const waitForUrlReady = deps.waitForUrlReady ?? defaultWaitForUrlReady
+  const probeUrl = toProbeUrl(url)
+  const bootstrapScript = buildControlUiBootstrapScript(url)
 
   return new Promise(async (resolve) => {
     const cleanup = (): void => {
@@ -135,7 +173,30 @@ export async function openWebChatWindow(
         return
       }
 
-      await win.loadURL(url)
+      if (bootstrapScript && typeof win.executeJavaScript === 'function') {
+        await win.loadURL(probeUrl)
+        await new Promise<void>((bootstrapResolve, bootstrapReject) => {
+          const handleBootstrapLoad = (): void => {
+            win.webContents.removeListener('did-fail-load', handleBootstrapFail)
+            bootstrapResolve()
+          }
+          const handleBootstrapFail = (
+            _event: unknown,
+            _code: number,
+            description: string
+          ): void => {
+            win.webContents.removeListener('did-finish-load', handleBootstrapLoad)
+            bootstrapReject(new Error(description || 'Failed to bootstrap Web Chat window.'))
+          }
+
+          win.webContents.once('did-finish-load', handleBootstrapLoad)
+          win.webContents.once('did-fail-load', handleBootstrapFail)
+        })
+        await win.executeJavaScript(bootstrapScript)
+        await win.loadURL(probeUrl)
+      } else {
+        await win.loadURL(url)
+      }
     } catch (error) {
       cleanup()
       resolve({

@@ -12,6 +12,8 @@ class FakeBrowserWindow extends EventEmitter {
   shown = false
   focused = false
   loadedUrl: string | null = null
+  loadedUrls: string[] = []
+  executedScripts: string[] = []
   destroyed = false
 
   constructor(_options: unknown) {
@@ -21,6 +23,12 @@ class FakeBrowserWindow extends EventEmitter {
 
   loadURL(url: string): Promise<void> {
     this.loadedUrl = url
+    this.loadedUrls.push(url)
+    return Promise.resolve()
+  }
+
+  executeJavaScript(script: string): Promise<void> {
+    this.executedScripts.push(script)
     return Promise.resolve()
   }
 
@@ -110,4 +118,37 @@ test('openWebChatWindow waits for the web chat url to become reachable before lo
   win.webContents.emit('did-finish-load')
   const result = await resultPromise
   assert.deepEqual(result, { success: true })
+})
+
+test('openWebChatWindow seeds control ui storage before the final load when gateway auth is in the hash', async () => {
+  FakeBrowserWindow.instances = []
+  resetWebChatWindowForTests()
+
+  const resultPromise = openWebChatWindow(
+    'http://127.0.0.1:18791/#gatewayUrl=ws%3A%2F%2F127.0.0.1%3A18789&token=test-token',
+    {
+      BrowserWindow: FakeBrowserWindow,
+      timeoutMs: 1000,
+      waitForUrlReady: async () => true
+    }
+  )
+
+  const win = FakeBrowserWindow.instances[0]
+  await new Promise((resolve) => setImmediate(resolve))
+
+  assert.deepEqual(win.loadedUrls, ['http://127.0.0.1:18791/'])
+  win.webContents.emit('did-finish-load')
+  await new Promise((resolve) => setImmediate(resolve))
+
+  assert.equal(win.executedScripts.length, 1)
+  assert.match(win.executedScripts[0] || '', /openclaw\.control\.settings\.v1/)
+  assert.match(win.executedScripts[0] || '', /ws:\/\/127\.0\.0\.1:18789/)
+  assert.match(win.executedScripts[0] || '', /test-token/)
+  assert.deepEqual(win.loadedUrls, ['http://127.0.0.1:18791/', 'http://127.0.0.1:18791/'])
+
+  win.webContents.emit('did-finish-load')
+  const result = await resultPromise
+
+  assert.deepEqual(result, { success: true })
+  assert.equal(win.shown, true)
 })
