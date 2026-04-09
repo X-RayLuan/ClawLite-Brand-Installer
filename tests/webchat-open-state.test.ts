@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import {
   describeWebChatOpenState,
   getWebChatReadinessPlan,
-  shouldOpenWebChatAfterReadinessCheck,
+  shouldOpenWebChatForGatewayStatus,
   type WebChatOpenStage
 } from '../src/renderer/src/steps/webchat-open-state.ts'
 
@@ -56,7 +56,7 @@ test('getWebChatReadinessPlan keeps the installer loading while Windows gateway 
   })
 })
 
-test('shouldOpenWebChatAfterReadinessCheck blocks browser launch when the gateway is unreachable', () => {
-  assert.equal(shouldOpenWebChatAfterReadinessCheck(false), false)
-  assert.equal(shouldOpenWebChatAfterReadinessCheck(true), true)
+test('shouldOpenWebChatForGatewayStatus only opens after the main process reports running', () => {
+  assert.equal(shouldOpenWebChatForGatewayStatus('stopped'), false)
+  assert.equal(shouldOpenWebChatForGatewayStatus('running'), true)
 })

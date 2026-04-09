@@ -14,8 +14,8 @@ export function getWebChatReadinessPlan(): {
   }
 }
 
-export function shouldOpenWebChatAfterReadinessCheck(ready: boolean): boolean {
-  return ready
+export function shouldOpenWebChatForGatewayStatus(status: 'running' | 'stopped'): boolean {
+  return status === 'running'
 }
 
 export function describeWebChatOpenState(stage: WebChatOpenStage): {
