@@ -28,7 +28,7 @@
     "webChatCheckingGateway": "Checking gateway readiness",
     "webChatOpening": "Opening Web Chat...",
     "webChatOpeningBrowser": "Launching the local OpenClaw dashboard",
-    "webChatGatewaySlow": "Gateway is still starting. Try again in a few seconds.",
+    "webChatGatewaySlow": "Gateway is starting. Web Chat will open automatically when ready...",
     "webChatStepProgress": "Step {{current}}/{{total}}"
   },
   "uninstall": {

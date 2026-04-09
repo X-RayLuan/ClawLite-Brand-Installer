@@ -212,7 +212,7 @@ export default function DoneStep({
 
       if (!ready) {
         setWebChatOpenStage('gateway_slow')
-        setLogs((prev) => [...prev, 'Gateway is still starting. Please try opening Web Chat again in a few seconds.'])
+        setLogs((prev) => [...prev, 'Gateway did not become ready within 60 seconds. Please restart Gateway and try again.'])
         setShowLogs(true)
         return
       }

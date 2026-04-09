@@ -42,16 +42,16 @@ test('describeWebChatOpenState reports the launch handoff stage last', () => {
   )
 })
 
-test('describeWebChatOpenState keeps the timeout fallback user-facing and non-fatal', () => {
+test('describeWebChatOpenState keeps slow gateway startup in the loading state', () => {
   assert.deepEqual(
     describeWebChatOpenState('gateway_slow'),
-    expected('gateway_slow', 'done.webChatOpening', 'done.webChatGatewaySlow', 3)
+    expected('gateway_slow', 'done.webChatPreparing', 'done.webChatGatewaySlow', 2)
   )
 })
 
-test('getWebChatReadinessPlan waits long enough to avoid opening a blank Web Chat during gateway startup', () => {
+test('getWebChatReadinessPlan keeps the installer loading while Windows gateway startup completes', () => {
   assert.deepEqual(getWebChatReadinessPlan(), {
-    attempts: 20,
+    attempts: 120,
     delayMs: 500
   })
 })

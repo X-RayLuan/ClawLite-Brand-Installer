@@ -9,7 +9,7 @@ export function getWebChatReadinessPlan(): {
   delayMs: number
 } {
   return {
-    attempts: 20,
+    attempts: 120,
     delayMs: 500
   }
 }
@@ -45,9 +45,9 @@ export function describeWebChatOpenState(stage: WebChatOpenStage): {
     case 'gateway_slow':
       return {
         stage,
-        summaryKey: 'done.webChatOpening',
+        summaryKey: 'done.webChatPreparing',
         detailKey: 'done.webChatGatewaySlow',
-        progressStep: 3,
+        progressStep: 2,
         progressTotal: 3
       }
     case 'opening':
