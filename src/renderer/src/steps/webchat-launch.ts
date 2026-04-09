@@ -1,5 +1,5 @@
 export function buildWebChatUrl(token: string): string {
-  return `http://127.0.0.1:18789/#token=${encodeURIComponent(token)}`
+  return `http://127.0.0.1:18791/#token=${encodeURIComponent(token)}`
 }
 
 export function shouldResetMainSessionOnOpen(params: {
