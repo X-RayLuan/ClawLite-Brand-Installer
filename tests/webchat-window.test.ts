@@ -41,13 +41,15 @@ test('openWebChatWindow waits for did-finish-load before showing the window', as
   FakeBrowserWindow.instances = []
   resetWebChatWindowForTests()
 
-  const resultPromise = openWebChatWindow('http://127.0.0.1:18789/#token=test', {
+  const resultPromise = openWebChatWindow('http://127.0.0.1:18791/#token=test', {
     BrowserWindow: FakeBrowserWindow,
-    timeoutMs: 1000
+    timeoutMs: 1000,
+    waitForUrlReady: async () => true
   })
 
   const win = FakeBrowserWindow.instances[0]
-  assert.equal(win.loadedUrl, 'http://127.0.0.1:18789/#token=test')
+  await new Promise((resolve) => setImmediate(resolve))
+  assert.equal(win.loadedUrl, 'http://127.0.0.1:18791/#token=test')
   assert.equal(win.shown, false)
 
   win.webContents.emit('did-finish-load')
@@ -62,9 +64,10 @@ test('openWebChatWindow reports did-fail-load without showing a blank window', a
   FakeBrowserWindow.instances = []
   resetWebChatWindowForTests()
 
-  const resultPromise = openWebChatWindow('http://127.0.0.1:18789/#token=test', {
+  const resultPromise = openWebChatWindow('http://127.0.0.1:18791/#token=test', {
     BrowserWindow: FakeBrowserWindow,
-    timeoutMs: 1000
+    timeoutMs: 1000,
+    waitForUrlReady: async () => true
   })
 
   const win = FakeBrowserWindow.instances[0]
@@ -74,4 +77,37 @@ test('openWebChatWindow reports did-fail-load without showing a blank window', a
   assert.equal(result.success, false)
   assert.match(result.error || '', /connection refused/)
   assert.equal(win.shown, false)
+})
+
+test('openWebChatWindow waits for the web chat url to become reachable before loadURL', async () => {
+  FakeBrowserWindow.instances = []
+  resetWebChatWindowForTests()
+
+  let releaseReady!: () => void
+  const readyPromise = new Promise<void>((resolve) => {
+    releaseReady = resolve
+  })
+  const readinessCalls: string[] = []
+
+  const resultPromise = openWebChatWindow('http://127.0.0.1:18791/#token=test', {
+    BrowserWindow: FakeBrowserWindow,
+    timeoutMs: 1000,
+    waitForUrlReady: async (url) => {
+      readinessCalls.push(url)
+      await readyPromise
+      return true
+    }
+  })
+
+  const win = FakeBrowserWindow.instances[0]
+  assert.equal(win.loadedUrl, null)
+  assert.deepEqual(readinessCalls, ['http://127.0.0.1:18791/#token=test'])
+
+  releaseReady()
+  await new Promise((resolve) => setImmediate(resolve))
+  assert.equal(win.loadedUrl, 'http://127.0.0.1:18791/#token=test')
+
+  win.webContents.emit('did-finish-load')
+  const result = await resultPromise
+  assert.deepEqual(result, { success: true })
 })
