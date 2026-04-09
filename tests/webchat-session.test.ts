@@ -13,15 +13,12 @@ test('getResetMainSessionCommand keeps using /reset for existing reset flow', ()
   assert.equal(command.useShellEnv, true)
 })
 
-test('getResetMainSessionCommand uses WSL bash wrapper instead of relying on openclaw in PATH', () => {
+test('getResetMainSessionCommand skips blocking agent commands on Windows', () => {
   const command = buildResetMainSessionCommand('/mock/openclaw', 'win32')
 
-  assert.equal(command.cmd, 'wsl')
-  assert.deepEqual(command.args.slice(0, 6), ['-d', 'Ubuntu', '-u', 'root', '--', 'bash'])
-  assert.equal(command.args[6], '-lc')
-  assert.match(command.args[7], /command -v openclaw/)
-  assert.match(command.args[7], /"\$OPENCLAW_BIN" 'agent' '--agent' 'main' '--message' '\/reset'/)
-  assert.doesNotMatch(command.args[7], /\n"\$OPENCLAW_BIN"/)
+  assert.equal(command.skip, true)
+  assert.equal(command.cmd, '')
+  assert.deepEqual(command.args, [])
   assert.equal(command.useShellEnv, false)
 })
 
@@ -42,17 +39,11 @@ test('getPrepareMainSessionCommand uses /new with target model on macOS', () => 
   assert.equal(command.useShellEnv, true)
 })
 
-test('getPrepareMainSessionCommand uses WSL bash wrapper instead of relying on openclaw in PATH', () => {
+test('getPrepareMainSessionCommand skips blocking agent commands on Windows', () => {
   const command = buildPrepareMainSessionCommand('/mock/openclaw', 'clawrouter/claude-sonnet-4-6', 'win32')
 
-  assert.equal(command.cmd, 'wsl')
-  assert.deepEqual(command.args.slice(0, 6), ['-d', 'Ubuntu', '-u', 'root', '--', 'bash'])
-  assert.equal(command.args[6], '-lc')
-  assert.match(command.args[7], /command -v openclaw/)
-  assert.match(
-    command.args[7],
-    /exec "\$OPENCLAW_BIN" 'agent' '--agent' 'main' '--message' '\/new clawrouter\/claude-sonnet-4-6'/
-  )
-  assert.doesNotMatch(command.args[7], /\n"\$OPENCLAW_BIN"/)
+  assert.equal(command.skip, true)
+  assert.equal(command.cmd, '')
+  assert.deepEqual(command.args, [])
   assert.equal(command.useShellEnv, false)
 })

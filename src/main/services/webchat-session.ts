@@ -1,33 +1,27 @@
 import { platform } from 'os'
 import { spawn } from 'child_process'
 import { findBin, getPathEnv } from './path-utils'
-import { runOpenClawInWsl } from './wsl-utils'
 import {
   buildPrepareMainSessionCommand,
   buildResetMainSessionCommand,
-  type SessionCommand
+  type SessionPlan
 } from './webchat-session-command'
 
 export function getResetMainSessionCommand(
   currentPlatform: NodeJS.Platform = platform()
-): SessionCommand {
+): SessionPlan {
   return buildResetMainSessionCommand(findBin('openclaw'), currentPlatform)
 }
 
 export function getPrepareMainSessionCommand(
   modelId: string,
   currentPlatform: NodeJS.Platform = platform()
-): SessionCommand {
+): SessionPlan {
   return buildPrepareMainSessionCommand(findBin('openclaw'), modelId, currentPlatform)
 }
 
-const runSessionCommand = async (
-  command: SessionCommand,
-  message: string,
-  currentPlatform: NodeJS.Platform = platform()
-): Promise<void> => {
-  if (currentPlatform === 'win32') {
-    await runOpenClawInWsl(['agent', '--agent', 'main', '--message', message], 30000)
+const runSessionCommand = async (command: SessionPlan): Promise<void> => {
+  if (command.skip) {
     return
   }
 
@@ -50,14 +44,10 @@ const runSessionCommand = async (
 
 export async function resetMainSession(): Promise<void> {
   const currentPlatform = platform()
-  await runSessionCommand(getResetMainSessionCommand(currentPlatform), '/reset', currentPlatform)
+  await runSessionCommand(getResetMainSessionCommand(currentPlatform))
 }
 
 export async function prepareMainSession(modelId: string): Promise<void> {
   const currentPlatform = platform()
-  await runSessionCommand(
-    getPrepareMainSessionCommand(modelId, currentPlatform),
-    `/new ${modelId}`,
-    currentPlatform
-  )
+  await runSessionCommand(getPrepareMainSessionCommand(modelId, currentPlatform))
 }
