@@ -6,7 +6,7 @@ import { buildWebChatUrl, shouldResetMainSessionOnOpen } from '../src/renderer/s
 test('buildWebChatUrl encodes gateway token into the URL hash', () => {
   assert.equal(
     buildWebChatUrl('token with spaces'),
-    'http://127.0.0.1:18791/#token=token%20with%20spaces'
+    'http://127.0.0.1:18791/#gatewayUrl=ws%3A%2F%2F127.0.0.1%3A18789&token=token+with+spaces'
   )
 })
 
