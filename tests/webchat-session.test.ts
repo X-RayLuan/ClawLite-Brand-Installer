@@ -21,6 +21,7 @@ test('getResetMainSessionCommand uses WSL bash wrapper instead of relying on ope
   assert.equal(command.args[6], '-lc')
   assert.match(command.args[7], /command -v openclaw/)
   assert.match(command.args[7], /"\$OPENCLAW_BIN" 'agent' '--agent' 'main' '--message' '\/reset'/)
+  assert.doesNotMatch(command.args[7], /\n"\$OPENCLAW_BIN"/)
   assert.equal(command.useShellEnv, false)
 })
 
@@ -50,7 +51,8 @@ test('getPrepareMainSessionCommand uses WSL bash wrapper instead of relying on o
   assert.match(command.args[7], /command -v openclaw/)
   assert.match(
     command.args[7],
-    /"\$OPENCLAW_BIN" 'agent' '--agent' 'main' '--message' '\/new clawrouter\/claude-sonnet-4-6'/
+    /exec "\$OPENCLAW_BIN" 'agent' '--agent' 'main' '--message' '\/new clawrouter\/claude-sonnet-4-6'/
   )
+  assert.doesNotMatch(command.args[7], /\n"\$OPENCLAW_BIN"/)
   assert.equal(command.useShellEnv, false)
 })

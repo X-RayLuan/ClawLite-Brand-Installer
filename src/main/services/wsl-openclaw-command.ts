@@ -25,7 +25,20 @@ export function buildWslOpenClawWrapper(): string {
 
 export function buildWslOpenClawShellCommand(args: string[]): string {
   const quotedArgs = args.map(shellQuote).join(' ')
-  return `${buildWslOpenClawWrapper()}\n"$OPENCLAW_BIN" ${quotedArgs}`
+  const candidateExecs = WSL_OPENCLAW_CANDIDATES.map(
+    (candidate) => `elif [ -x ${shellQuote(candidate)} ]; then exec ${shellQuote(candidate)} ${quotedArgs}`
+  ).join('\n')
+
+  return [
+    'OPENCLAW_BIN="$(command -v openclaw 2>/dev/null || true)"',
+    'if [ -n "$OPENCLAW_BIN" ]; then',
+    `  exec "$OPENCLAW_BIN" ${quotedArgs}`,
+    candidateExecs,
+    'else',
+    "  echo 'openclaw CLI not found in WSL' >&2",
+    '  exit 127',
+    'fi'
+  ].join('\n')
 }
 
 export function buildWslOpenClawCommandArgs(

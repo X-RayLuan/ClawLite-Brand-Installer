@@ -11,7 +11,6 @@ test('buildWslOpenClawWrapper resolves openclaw via command -v before fixed path
   const wrapper = buildWslOpenClawWrapper()
 
   assert.match(wrapper, /command -v openclaw/)
-  assert.match(wrapper, /\[ -n "\$OPENCLAW_BIN" \]/)
   assert.match(wrapper, /\/root\/.npm-global\/bin\/openclaw/)
   assert.match(wrapper, /\/usr\/local\/bin\/openclaw/)
   assert.match(wrapper, /\/usr\/bin\/openclaw/)
@@ -21,10 +20,10 @@ test('buildWslOpenClawWrapper resolves openclaw via command -v before fixed path
 test('buildWslOpenClawShellCommand quotes args and invokes resolved binary', () => {
   const script = buildWslOpenClawShellCommand(['agent', '--agent', 'main', '--message', "/new openai-codex/gpt-5.3-codex-spark"])
 
-  assert.match(script, /OPENCLAW_BIN=/)
+  assert.doesNotMatch(script, /\n"\$OPENCLAW_BIN"/)
   assert.match(
     script,
-    /"\$OPENCLAW_BIN" 'agent' '--agent' 'main' '--message' '\/new openai-codex\/gpt-5\.3-codex-spark'/
+    /exec "\$OPENCLAW_BIN" 'agent' '--agent' 'main' '--message' '\/new openai-codex\/gpt-5\.3-codex-spark'/
   )
 })
 
@@ -34,5 +33,5 @@ test('buildWslOpenClawCommandArgs wraps commands in bash -lc for WSL', () => {
   assert.deepEqual(args.slice(0, 6), ['-d', 'Ubuntu', '-u', 'root', '--', 'bash'])
   assert.equal(args[6], '-lc')
   assert.match(args[7], /command -v openclaw/)
-  assert.match(args[7], /"\$OPENCLAW_BIN" 'doctor' '--fix'/)
+  assert.match(args[7], /exec "\$OPENCLAW_BIN" 'doctor' '--fix'/)
 })
