@@ -1,3 +1,5 @@
+import { buildWslOpenClawCommandArgs } from './wsl-openclaw-command.ts'
+
 export type SessionCommand = { cmd: string; args: string[]; useShellEnv: boolean }
 
 export function buildResetMainSessionCommand(
@@ -7,7 +9,7 @@ export function buildResetMainSessionCommand(
   if (currentPlatform === 'win32') {
     return {
       cmd: 'wsl',
-      args: ['-d', 'Ubuntu', '-u', 'root', '--', 'openclaw', 'agent', '--agent', 'main', '--message', '/reset'],
+      args: buildWslOpenClawCommandArgs(['agent', '--agent', 'main', '--message', '/reset']),
       useShellEnv: false
     }
   }
@@ -27,19 +29,7 @@ export function buildPrepareMainSessionCommand(
   if (currentPlatform === 'win32') {
     return {
       cmd: 'wsl',
-      args: [
-        '-d',
-        'Ubuntu',
-        '-u',
-        'root',
-        '--',
-        'openclaw',
-        'agent',
-        '--agent',
-        'main',
-        '--message',
-        `/new ${modelId}`
-      ],
+      args: buildWslOpenClawCommandArgs(['agent', '--agent', 'main', '--message', `/new ${modelId}`]),
       useShellEnv: false
     }
   }

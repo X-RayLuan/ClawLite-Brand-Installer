@@ -1,6 +1,7 @@
 import { spawn } from 'child_process'
 import { posix as pathPosix } from 'path'
 import { buildWslCommandVariants, isLegacyWslCommandHelpText } from './wsl-command'
+import { buildWslOpenClawShellCommand } from './wsl-openclaw-command.ts'
 import { detectWslStateFromOutputs } from './wsl-state-detection'
 
 export type WslState =
@@ -122,6 +123,12 @@ export const checkWslState = async (): Promise<WslState> => {
 export const runInWsl = (script: string, timeout = 30000): Promise<string> =>
   runWslCommand(['bash', '-lc', script], timeout, { distro: WSL_DISTRO, user: WSL_USER })
 
+export const runOpenClawInWsl = (args: string[], timeout = 30000): Promise<string> =>
+  runWslCommand(['bash', '-lc', buildWslOpenClawShellCommand(args)], timeout, {
+    distro: WSL_DISTRO,
+    user: WSL_USER
+  })
+
 /** Read file inside WSL */
 export const readWslFile = (path: string): Promise<string> =>
   runWslCommand(['cat', path], 10000, { distro: WSL_DISTRO, user: WSL_USER })
@@ -167,7 +174,7 @@ export const writeWslFile = (path: string, content: string): Promise<void> =>
 
 export const resolveWslOpenClawConfigPath = async (): Promise<string> => {
   try {
-    const resolved = await runInWsl('openclaw config file', 15000)
+    const resolved = await runOpenClawInWsl(['config', 'file'], 15000)
     const trimmed = resolved.trim()
     return trimmed || DEFAULT_WSL_OPENCLAW_CONFIG_PATH
   } catch {

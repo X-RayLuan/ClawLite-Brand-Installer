@@ -1,7 +1,7 @@
 import { platform } from 'os'
 import { spawn } from 'child_process'
 import { findBin, getPathEnv } from './path-utils'
-import { runInWsl } from './wsl-utils'
+import { runOpenClawInWsl } from './wsl-utils'
 import {
   buildPrepareMainSessionCommand,
   buildResetMainSessionCommand,
@@ -27,7 +27,7 @@ const runSessionCommand = async (
   currentPlatform: NodeJS.Platform = platform()
 ): Promise<void> => {
   if (currentPlatform === 'win32') {
-    await runInWsl(`openclaw agent --agent main --message '${message.replace(/'/g, `'\\''`)}'`, 30000)
+    await runOpenClawInWsl(['agent', '--agent', 'main', '--message', message], 30000)
     return
   }
 

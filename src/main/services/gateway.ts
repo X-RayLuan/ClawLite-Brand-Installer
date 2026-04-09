@@ -3,6 +3,7 @@ import http from 'http'
 import { platform } from 'os'
 import { getPathEnv, findBin } from './path-utils'
 import { checkPort } from './troubleshooter'
+import { buildWslOpenClawCommandArgs } from './wsl-openclaw-command.ts'
 import { t } from '../../shared/i18n/main'
 
 export interface GatewayResult {
@@ -227,7 +228,7 @@ const runDoctorFix = (): Promise<void> =>
 
     if (isWin) {
       cmd = 'wsl'
-      args = ['-d', 'Ubuntu', '-u', 'root', '--', 'bash', '-lc', 'openclaw doctor --fix']
+      args = buildWslOpenClawCommandArgs(['doctor', '--fix'])
     } else {
       cmd = findBin('openclaw')
       args = ['doctor', '--fix']

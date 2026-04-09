@@ -2,6 +2,7 @@ import { spawn } from 'child_process'
 import { platform } from 'os'
 import { BrowserWindow } from 'electron'
 import { getPathEnv, findBin } from './path-utils'
+import { buildWslOpenClawCommandArgs } from './wsl-openclaw-command.ts'
 
 const exec = (
   cmd: string,
@@ -57,7 +58,7 @@ export const runDoctorFix = async (win: BrowserWindow): Promise<{ success: boole
 
   if (isWin) {
     cmd = 'wsl'
-    args = ['-d', 'Ubuntu', '-u', 'root', '--', 'bash', '-lc', 'openclaw doctor --fix']
+    args = buildWslOpenClawCommandArgs(['doctor', '--fix'])
   } else {
     cmd = findBin('npm')
     args = ['exec', '--', 'openclaw', 'doctor', '--fix']
