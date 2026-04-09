@@ -28,7 +28,7 @@
     "webChatCheckingGateway": "Gateway の状態を確認しています",
     "webChatOpening": "Web Chat を開いています...",
     "webChatOpeningBrowser": "ローカル OpenClaw ダッシュボードを起動しています",
-    "webChatGatewaySlow": "Gateway の応答が遅いため、そのままダッシュボードを開きます...",
+    "webChatGatewaySlow": "Gateway はまだ起動中です。数秒後にもう一度お試しください。",
     "webChatStepProgress": "ステップ {{current}}/{{total}}"
   },
   "uninstall": {

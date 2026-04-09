@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   describeWebChatOpenState,
   getWebChatReadinessPlan,
+  shouldOpenWebChatAfterReadinessCheck,
   type WebChatOpenStage
 } from '../src/renderer/src/steps/webchat-open-state.ts'
 
@@ -53,4 +54,9 @@ test('getWebChatReadinessPlan waits long enough to avoid opening a blank Web Cha
     attempts: 20,
     delayMs: 500
   })
+})
+
+test('shouldOpenWebChatAfterReadinessCheck blocks browser launch when the gateway is unreachable', () => {
+  assert.equal(shouldOpenWebChatAfterReadinessCheck(false), false)
+  assert.equal(shouldOpenWebChatAfterReadinessCheck(true), true)
 })

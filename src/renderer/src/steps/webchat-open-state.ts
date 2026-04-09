@@ -14,6 +14,10 @@ export function getWebChatReadinessPlan(): {
   }
 }
 
+export function shouldOpenWebChatAfterReadinessCheck(ready: boolean): boolean {
+  return ready
+}
+
 export function describeWebChatOpenState(stage: WebChatOpenStage): {
   stage: WebChatOpenStage
   summaryKey: string

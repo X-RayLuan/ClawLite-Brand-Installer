@@ -9,7 +9,12 @@ import ProviderSwitchModal from '../components/ProviderSwitchModal'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { useManagement } from '../hooks/useManagement'
 import { buildWebChatUrl, shouldResetMainSessionOnOpen } from './webchat-launch'
-import { describeWebChatOpenState, getWebChatReadinessPlan, type WebChatOpenStage } from './webchat-open-state'
+import {
+  describeWebChatOpenState,
+  getWebChatReadinessPlan,
+  shouldOpenWebChatAfterReadinessCheck,
+  type WebChatOpenStage
+} from './webchat-open-state'
 
 const UPDATE_CHECK_INTERVAL = 30 * 60 * 1000 // 30 min
 
@@ -207,12 +212,14 @@ export default function DoneStep({
 
       if (!ready) {
         setWebChatOpenStage('gateway_slow')
-        setLogs((prev) => [...prev, 'Gateway health check is slow; opening Web Chat URL directly...'])
+        setLogs((prev) => [...prev, 'Gateway is still starting. Please try opening Web Chat again in a few seconds.'])
         setShowLogs(true)
-      } else {
-        setWebChatOpenStage('opening')
+        return
       }
 
+      if (!shouldOpenWebChatAfterReadinessCheck(ready)) return
+
+      setWebChatOpenStage('opening')
       const url = buildWebChatUrl(token)
       window.electronAPI.system.openExternal(url)
     } finally {

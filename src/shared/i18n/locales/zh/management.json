@@ -28,7 +28,7 @@
     "webChatCheckingGateway": "正在检查 Gateway 状态",
     "webChatOpening": "正在打开 Web Chat...",
     "webChatOpeningBrowser": "正在打开本地 OpenClaw 面板",
-    "webChatGatewaySlow": "Gateway 响应较慢，仍将继续打开面板...",
+    "webChatGatewaySlow": "Gateway 仍在启动，请几秒后重试。",
     "webChatStepProgress": "第 {{current}}/{{total}} 步"
   },
   "uninstall": {
