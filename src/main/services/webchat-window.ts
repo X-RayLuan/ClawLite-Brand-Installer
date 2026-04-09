@@ -78,7 +78,7 @@ function buildControlUiBootstrapScript(url: string): string | null {
   })
 
   return `
-    localStorage.removeItem('openclaw.control.token.v1');
+    localStorage.setItem('openclaw.control.token.v1', ${JSON.stringify(token)});
     localStorage.setItem(${JSON.stringify(tokenKey)}, ${JSON.stringify(token)});
     localStorage.setItem(${JSON.stringify(settingsKey)}, ${JSON.stringify(settingsValue)});
     localStorage.setItem('openclaw.control.settings.v1', ${JSON.stringify(settingsValue)});

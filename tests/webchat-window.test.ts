@@ -141,6 +141,7 @@ test('openWebChatWindow seeds control ui storage before the final load when gate
   await new Promise((resolve) => setImmediate(resolve))
 
   assert.equal(win.webContents.executedScripts.length, 1)
+  assert.match(win.webContents.executedScripts[0] || '', /localStorage\.setItem\('openclaw\.control\.token\.v1'/)
   assert.match(win.webContents.executedScripts[0] || '', /openclaw\.control\.settings\.v1/)
   assert.match(win.webContents.executedScripts[0] || '', /ws:\/\/127\.0\.0\.1:18789/)
   assert.match(win.webContents.executedScripts[0] || '', /test-token/)
