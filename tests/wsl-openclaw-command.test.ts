@@ -11,6 +11,7 @@ test('buildWslOpenClawWrapper resolves openclaw via command -v before fixed path
   const wrapper = buildWslOpenClawWrapper()
 
   assert.match(wrapper, /command -v openclaw/)
+  assert.match(wrapper, /\[ -n "\$OPENCLAW_BIN" \]/)
   assert.match(wrapper, /\/root\/.npm-global\/bin\/openclaw/)
   assert.match(wrapper, /\/usr\/local\/bin\/openclaw/)
   assert.match(wrapper, /\/usr\/bin\/openclaw/)

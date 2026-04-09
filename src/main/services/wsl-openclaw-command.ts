@@ -12,8 +12,9 @@ export function buildWslOpenClawWrapper(): string {
   ).join('\n')
 
   return [
-    'if command -v openclaw >/dev/null 2>&1; then',
-    '  OPENCLAW_BIN="$(command -v openclaw)"',
+    'OPENCLAW_BIN="$(command -v openclaw 2>/dev/null || true)"',
+    'if [ -n "$OPENCLAW_BIN" ]; then',
+    '  :',
     candidateChecks,
     'else',
     "  echo 'openclaw CLI not found in WSL' >&2",
