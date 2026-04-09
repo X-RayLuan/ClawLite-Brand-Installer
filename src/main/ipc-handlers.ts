@@ -23,6 +23,7 @@ import {
   setGatewayLogCallback
 } from './services/gateway'
 import { prepareMainSession, resetMainSession } from './services/webchat-session'
+import { openWebChatWindow } from './services/webchat-window'
 import { checkWslState } from './services/wsl-utils'
 import { checkForUpdates, downloadUpdate, installUpdate } from './services/updater'
 import { uninstallOpenClaw } from './services/uninstaller'
@@ -331,6 +332,13 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
     try {
       await prepareMainSession(modelId)
       return { success: true }
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  })
+  ipcMain.handle('webchat:open', async (_event, url: string) => {
+    try {
+      return await openWebChatWindow(url, { BrowserWindow })
     } catch (e) {
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }

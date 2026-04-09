@@ -83,6 +83,9 @@ interface ElectronAPI {
     onLog: (cb: (msg: string) => void) => () => void
     onStatusChanged: (cb: (status: 'running' | 'stopped') => void) => () => void
   }
+  webchat: {
+    open: (url: string) => Promise<{ success: boolean; error?: string }>
+  }
   troubleshoot: {
     checkPort: () => Promise<{ inUse: boolean; pid?: string }>
     doctorFix: () => Promise<{ success: boolean }>

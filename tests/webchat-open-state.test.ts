@@ -49,10 +49,9 @@ test('describeWebChatOpenState keeps slow gateway startup in the loading state',
   )
 })
 
-test('getWebChatReadinessPlan keeps polling without a fixed timeout and buffers before launch', () => {
+test('getWebChatReadinessPlan keeps polling without a fixed timeout', () => {
   assert.deepEqual(getWebChatReadinessPlan(), {
-    delayMs: 500,
-    preOpenDelayMs: 5000
+    delayMs: 500
   })
 })
 

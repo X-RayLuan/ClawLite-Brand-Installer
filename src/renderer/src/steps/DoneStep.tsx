@@ -207,9 +207,12 @@ export default function DoneStep({
       }
 
       setWebChatOpenStage('opening')
-      await new Promise((r) => setTimeout(r, readinessPlan.preOpenDelayMs))
       const url = buildWebChatUrl(token)
-      window.electronAPI.system.openExternal(url)
+      const openResult = await window.electronAPI.webchat.open(url)
+      if (!openResult.success) {
+        setLogs((prev) => [...prev, `Failed to open Web Chat: ${openResult.error || 'unknown error'}`])
+        setShowLogs(true)
+      }
     } finally {
       setWebChatOpenStage(null)
     }
