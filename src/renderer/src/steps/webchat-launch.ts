@@ -6,6 +6,9 @@ export function buildWebChatUrl(token: string): string {
   return `http://127.0.0.1:18791/#${params.toString()}`
 }
 
+const WEBCHAT_CONTROL_HOST = '127.0.0.1'
+const WEBCHAT_CONTROL_PORT = 18791
+
 interface ConfigReadResult {
   success: boolean
   config?: {
@@ -15,26 +18,12 @@ interface ConfigReadResult {
 
 type WebChatLaunchEvent =
   | { type: 'token_stable'; token: string }
-  | { type: 'probe_result'; url: string; ready: boolean }
+  | { type: 'probe_result'; target: string; ready: boolean }
   | { type: 'open_external_start'; url: string }
   | { type: 'open_external_result'; url: string; success: boolean; error?: string }
 
-async function defaultProbeUrl(url: string): Promise<boolean> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 1000)
-
-  try {
-    await fetch(url, {
-      method: 'GET',
-      cache: 'no-store',
-      signal: controller.signal
-    })
-    return true
-  } catch {
-    return false
-  } finally {
-    clearTimeout(timeout)
-  }
+async function defaultProbePort(_port: number): Promise<boolean> {
+  return false
 }
 
 function normalizeToken(token: string | null | undefined): string | null {
@@ -86,23 +75,23 @@ export async function waitForStableGatewayToken(params: {
 }
 
 export async function waitForWebChatServicesReady(params: {
-  probeUrl?: (url: string) => Promise<boolean>
+  probePort?: (port: number) => Promise<boolean>
   onEvent?: (event: WebChatLaunchEvent) => void
   attempts?: number
   delayMs?: number
   sleep?: (ms: number) => Promise<void>
 }): Promise<boolean> {
-  const probeUrl = params.probeUrl ?? defaultProbeUrl
+  const probePort = params.probePort ?? defaultProbePort
   const attempts = params.attempts ?? 10
   const delayMs = params.delayMs ?? 400
   const sleep =
     params.sleep ??
     ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)))
-  const url = 'http://127.0.0.1:18791/'
+  const target = `${WEBCHAT_CONTROL_HOST}:${WEBCHAT_CONTROL_PORT}`
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const ready = await probeUrl(url)
-    params.onEvent?.({ type: 'probe_result', url, ready })
+    const ready = await probePort(WEBCHAT_CONTROL_PORT)
+    params.onEvent?.({ type: 'probe_result', target, ready })
     if (ready) {
       return true
     }
@@ -118,7 +107,7 @@ export async function waitForWebChatServicesReady(params: {
 export async function openWebChatExternally(params: {
   initialToken: string | null
   readConfig: () => Promise<ConfigReadResult>
-  probeUrl?: (url: string) => Promise<boolean>
+  probePort?: (port: number) => Promise<boolean>
   onEvent?: (event: WebChatLaunchEvent) => void
   openExternal: (url: string) => Promise<{ success: boolean; error?: string }>
   attempts?: number
@@ -139,7 +128,7 @@ export async function openWebChatExternally(params: {
   }
 
   const servicesReady = await waitForWebChatServicesReady({
-    probeUrl: params.probeUrl,
+    probePort: params.probePort,
     onEvent: params.onEvent,
     attempts: params.attempts,
     delayMs: params.delayMs,

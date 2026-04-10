@@ -110,8 +110,8 @@ const electronAPI = {
     }
   },
   troubleshoot: {
-    checkPort: (): Promise<{ inUse: boolean; pid?: string }> =>
-      ipcRenderer.invoke('troubleshoot:check-port'),
+    checkPort: (port?: number): Promise<{ inUse: boolean; pid?: string }> =>
+      ipcRenderer.invoke('troubleshoot:check-port', port),
     doctorFix: (): Promise<{ success: boolean }> => ipcRenderer.invoke('troubleshoot:doctor-fix')
   },
   wsl: {

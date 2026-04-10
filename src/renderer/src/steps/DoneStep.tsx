@@ -202,7 +202,7 @@ export default function DoneStep({
           if (event.type === 'probe_result') {
             setLogs((prev) => [
               ...prev,
-              `Web Chat probe ${event.ready ? 'ready' : 'waiting'}: ${event.url}`
+              `Web Chat port ${event.ready ? 'ready' : 'waiting'}: ${event.target}`
             ])
             return
           }
@@ -216,6 +216,10 @@ export default function DoneStep({
               `Browser launch ${event.success ? 'succeeded' : 'failed'}${event.error ? `: ${event.error}` : '.'}`
             ])
           }
+        },
+        probePort: async (port) => {
+          const result = await window.electronAPI.troubleshoot.checkPort(port)
+          return result.inUse
         },
         openExternal: (url) => window.electronAPI.system.openExternal(url)
       })

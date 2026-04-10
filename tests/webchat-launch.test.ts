@@ -58,7 +58,7 @@ test('openWebChatExternally opens the browser only after the gateway token stabi
     { success: true, config: { gatewayToken: 'next-token' } }
   ]
   const opened: string[] = []
-  const probes: string[] = []
+  const probes: number[] = []
   const events: string[] = []
 
   const result = await openWebChatExternally({
@@ -66,12 +66,13 @@ test('openWebChatExternally opens the browser only after the gateway token stabi
     readConfig: async () => reads.shift() ?? { success: true, config: { gatewayToken: 'next-token' } },
     onEvent: (event) => {
       if (event.type === 'token_stable') events.push(`token:${event.token}`)
-      if (event.type === 'probe_result') events.push(`probe:${event.url}:${event.ready ? 'ready' : 'waiting'}`)
+      if (event.type === 'probe_result')
+        events.push(`probe:${event.target}:${event.ready ? 'ready' : 'waiting'}`)
       if (event.type === 'open_external_start') events.push(`open:${event.url}`)
       if (event.type === 'open_external_result') events.push(`result:${event.success ? 'success' : 'failure'}`)
     },
-    probeUrl: async (url) => {
-      probes.push(url)
+    probePort: async (port) => {
+      probes.push(port)
       return true
     },
     openExternal: async (url) => {
@@ -84,10 +85,10 @@ test('openWebChatExternally opens the browser only after the gateway token stabi
   })
 
   assert.deepEqual(result, { success: true, token: 'next-token' })
-  assert.deepEqual(probes, ['http://127.0.0.1:18791/'])
+  assert.deepEqual(probes, [18791])
   assert.deepEqual(events, [
     'token:next-token',
-    'probe:http://127.0.0.1:18791/:ready',
+    'probe:127.0.0.1:18791:ready',
     'open:http://127.0.0.1:18791/#gatewayUrl=ws%3A%2F%2F127.0.0.1%3A18789&token=next-token',
     'result:success'
   ])
@@ -102,7 +103,7 @@ test('openWebChatExternally does not open the browser when no stable gateway tok
   const result = await openWebChatExternally({
     initialToken: null,
     readConfig: async () => ({ success: true, config: { gatewayToken: undefined } }),
-    probeUrl: async () => true,
+    probePort: async () => true,
     openExternal: async () => {
       opened = true
       return { success: true }
@@ -118,13 +119,13 @@ test('openWebChatExternally does not open the browser when no stable gateway tok
 })
 
 test('waitForWebChatServicesReady waits until the control ui is reachable', async () => {
-  const probes: string[] = []
+  const probes: number[] = []
   let attempts = 0
   const delays: number[] = []
 
   const ready = await waitForWebChatServicesReady({
-    probeUrl: async (url) => {
-      probes.push(url)
+    probePort: async (port) => {
+      probes.push(port)
       attempts += 1
       return attempts > 1
     },
@@ -134,7 +135,7 @@ test('waitForWebChatServicesReady waits until the control ui is reachable', asyn
   })
 
   assert.equal(ready, true)
-  assert.deepEqual(probes, ['http://127.0.0.1:18791/', 'http://127.0.0.1:18791/'])
+  assert.deepEqual(probes, [18791, 18791])
   assert.deepEqual(delays, [25])
 })
 
@@ -144,7 +145,7 @@ test('openWebChatExternally does not open the browser until the control ui is re
   const result = await openWebChatExternally({
     initialToken: 'stable-token',
     readConfig: async () => ({ success: true, config: { gatewayToken: 'stable-token' } }),
-    probeUrl: async () => false,
+    probePort: async () => false,
     openExternal: async () => {
       opened = true
       return { success: true }

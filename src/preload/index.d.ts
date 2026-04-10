@@ -84,7 +84,7 @@ interface ElectronAPI {
     onStatusChanged: (cb: (status: 'running' | 'stopped') => void) => () => void
   }
   troubleshoot: {
-    checkPort: () => Promise<{ inUse: boolean; pid?: string }>
+    checkPort: (port?: number) => Promise<{ inUse: boolean; pid?: string }>
     doctorFix: () => Promise<{ success: boolean }>
   }
   wsl: {

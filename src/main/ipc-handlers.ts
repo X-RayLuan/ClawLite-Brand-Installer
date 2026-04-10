@@ -336,7 +336,7 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }
   })
-  ipcMain.handle('troubleshoot:check-port', () => checkPort())
+  ipcMain.handle('troubleshoot:check-port', (_e, port?: number) => checkPort(port))
   ipcMain.handle('troubleshoot:doctor-fix', () => runDoctorFix(win()))
 
   ipcMain.handle('newsletter:subscribe', async (_e, email: string) => {
