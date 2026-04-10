@@ -59,7 +59,6 @@ test('openWebChatExternally opens the browser only after the gateway token stabi
   ]
   const opened: string[] = []
   const probes: number[] = []
-  const urlProbes: string[] = []
   const events: string[] = []
 
   const result = await openWebChatExternally({
@@ -74,11 +73,8 @@ test('openWebChatExternally opens the browser only after the gateway token stabi
     },
     probePort: async (port) => {
       probes.push(port)
-      return true
-    },
-    probeUrl: async (url) => {
-      urlProbes.push(url)
-      return true
+      if (port === 18789) return true
+      return probes.filter((value) => value === 18791).length >= 1
     },
     openExternal: async (url) => {
       opened.push(url)
@@ -90,11 +86,11 @@ test('openWebChatExternally opens the browser only after the gateway token stabi
   })
 
   assert.deepEqual(result, { success: true, token: 'next-token' })
-  assert.deepEqual(probes, [18789])
-  assert.deepEqual(urlProbes, ['http://127.0.0.1:18789/'])
+  assert.deepEqual(probes, [18789, 18791])
   assert.deepEqual(events, [
     'token:next-token',
     'probe:127.0.0.1:18789:ready',
+    'probe:127.0.0.1:18791:ready',
     'open:http://127.0.0.1:18789/#token=next-token',
     'result:success'
   ])
@@ -110,7 +106,6 @@ test('openWebChatExternally does not open the browser when no stable gateway tok
     initialToken: null,
     readConfig: async () => ({ success: true, config: { gatewayToken: undefined } }),
     probePort: async () => true,
-    probeUrl: async () => true,
     openExternal: async () => {
       opened = true
       return { success: true }
@@ -127,19 +122,15 @@ test('openWebChatExternally does not open the browser when no stable gateway tok
 
 test('waitForWebChatServicesReady waits until the control ui is reachable', async () => {
   const probes: number[] = []
-  const urlProbes: string[] = []
   let attempts = 0
   const delays: number[] = []
 
   const ready = await waitForWebChatServicesReady({
     probePort: async (port) => {
       probes.push(port)
-      return true
-    },
-    probeUrl: async (url) => {
-      urlProbes.push(url)
       attempts += 1
-      return attempts > 1
+      if (port === 18789) return true
+      return attempts >= 4
     },
     attempts: 2,
     delayMs: 25,
@@ -147,8 +138,7 @@ test('waitForWebChatServicesReady waits until the control ui is reachable', asyn
   })
 
   assert.equal(ready, true)
-  assert.deepEqual(probes, [18789, 18789])
-  assert.deepEqual(urlProbes, ['http://127.0.0.1:18789/', 'http://127.0.0.1:18789/'])
+  assert.deepEqual(probes, [18789, 18791, 18789, 18791])
   assert.deepEqual(delays, [25])
 })
 
@@ -159,7 +149,6 @@ test('openWebChatExternally does not open the browser until the control ui is re
     initialToken: 'stable-token',
     readConfig: async () => ({ success: true, config: { gatewayToken: 'stable-token' } }),
     probePort: async () => false,
-    probeUrl: async () => true,
     openExternal: async () => {
       opened = true
       return { success: true }
