@@ -59,6 +59,7 @@ test('openWebChatExternally opens the browser only after the gateway token stabi
   ]
   const opened: string[] = []
   const probes: number[] = []
+  const urlProbes: string[] = []
   const events: string[] = []
 
   const result = await openWebChatExternally({
@@ -75,6 +76,10 @@ test('openWebChatExternally opens the browser only after the gateway token stabi
       probes.push(port)
       return true
     },
+    probeUrl: async (url) => {
+      urlProbes.push(url)
+      return true
+    },
     openExternal: async (url) => {
       opened.push(url)
       return { success: true }
@@ -86,6 +91,7 @@ test('openWebChatExternally opens the browser only after the gateway token stabi
 
   assert.deepEqual(result, { success: true, token: 'next-token' })
   assert.deepEqual(probes, [18789])
+  assert.deepEqual(urlProbes, ['http://127.0.0.1:18789/'])
   assert.deepEqual(events, [
     'token:next-token',
     'probe:127.0.0.1:18789:ready',
@@ -104,6 +110,7 @@ test('openWebChatExternally does not open the browser when no stable gateway tok
     initialToken: null,
     readConfig: async () => ({ success: true, config: { gatewayToken: undefined } }),
     probePort: async () => true,
+    probeUrl: async () => true,
     openExternal: async () => {
       opened = true
       return { success: true }
@@ -120,12 +127,17 @@ test('openWebChatExternally does not open the browser when no stable gateway tok
 
 test('waitForWebChatServicesReady waits until the control ui is reachable', async () => {
   const probes: number[] = []
+  const urlProbes: string[] = []
   let attempts = 0
   const delays: number[] = []
 
   const ready = await waitForWebChatServicesReady({
     probePort: async (port) => {
       probes.push(port)
+      return true
+    },
+    probeUrl: async (url) => {
+      urlProbes.push(url)
       attempts += 1
       return attempts > 1
     },
@@ -136,6 +148,7 @@ test('waitForWebChatServicesReady waits until the control ui is reachable', asyn
 
   assert.equal(ready, true)
   assert.deepEqual(probes, [18789, 18789])
+  assert.deepEqual(urlProbes, ['http://127.0.0.1:18789/', 'http://127.0.0.1:18789/'])
   assert.deepEqual(delays, [25])
 })
 
@@ -146,6 +159,7 @@ test('openWebChatExternally does not open the browser until the control ui is re
     initialToken: 'stable-token',
     readConfig: async () => ({ success: true, config: { gatewayToken: 'stable-token' } }),
     probePort: async () => false,
+    probeUrl: async () => true,
     openExternal: async () => {
       opened = true
       return { success: true }
