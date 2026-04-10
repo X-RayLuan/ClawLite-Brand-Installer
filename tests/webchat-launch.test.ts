@@ -12,7 +12,7 @@ import {
 test('buildWebChatUrl encodes gateway token into the URL hash', () => {
   assert.equal(
     buildWebChatUrl('token with spaces'),
-    'http://127.0.0.1:18791/#gatewayUrl=ws%3A%2F%2F127.0.0.1%3A18789&token=token+with+spaces'
+    'http://127.0.0.1:18789/#token=token%20with%20spaces'
   )
 })
 
@@ -85,15 +85,15 @@ test('openWebChatExternally opens the browser only after the gateway token stabi
   })
 
   assert.deepEqual(result, { success: true, token: 'next-token' })
-  assert.deepEqual(probes, [18791])
+  assert.deepEqual(probes, [18789])
   assert.deepEqual(events, [
     'token:next-token',
-    'probe:127.0.0.1:18791:ready',
-    'open:http://127.0.0.1:18791/#gatewayUrl=ws%3A%2F%2F127.0.0.1%3A18789&token=next-token',
+    'probe:127.0.0.1:18789:ready',
+    'open:http://127.0.0.1:18789/#token=next-token',
     'result:success'
   ])
   assert.deepEqual(opened, [
-    'http://127.0.0.1:18791/#gatewayUrl=ws%3A%2F%2F127.0.0.1%3A18789&token=next-token'
+    'http://127.0.0.1:18789/#token=next-token'
   ])
 })
 
@@ -135,7 +135,7 @@ test('waitForWebChatServicesReady waits until the control ui is reachable', asyn
   })
 
   assert.equal(ready, true)
-  assert.deepEqual(probes, [18791, 18791])
+  assert.deepEqual(probes, [18789, 18789])
   assert.deepEqual(delays, [25])
 })
 

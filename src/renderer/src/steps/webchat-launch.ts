@@ -1,13 +1,9 @@
 export function buildWebChatUrl(token: string): string {
-  const params = new URLSearchParams({
-    gatewayUrl: 'ws://127.0.0.1:18789',
-    token
-  })
-  return `http://127.0.0.1:18791/#${params.toString()}`
+  return `http://127.0.0.1:18789/#token=${encodeURIComponent(token)}`
 }
 
 const WEBCHAT_CONTROL_HOST = '127.0.0.1'
-const WEBCHAT_CONTROL_PORT = 18791
+const WEBCHAT_CONTROL_PORT = 18789
 
 interface ConfigReadResult {
   success: boolean
