@@ -89,11 +89,10 @@ export async function waitForWebChatServicesReady(params: {
   const sleep =
     params.sleep ??
     ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)))
-  const urls = ['http://127.0.0.1:18789/', 'http://127.0.0.1:18791/']
+  const url = 'http://127.0.0.1:18791/'
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const checks = await Promise.all(urls.map((url) => probeUrl(url)))
-    if (checks.every(Boolean)) {
+    if (await probeUrl(url)) {
       return true
     }
 
