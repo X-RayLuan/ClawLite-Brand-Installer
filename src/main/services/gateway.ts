@@ -89,16 +89,11 @@ const startGatewayWsl = async (): Promise<GatewayResult> => {
   return new Promise((resolve) => {
     const child = spawn(
       'wsl',
-      [
-        '-d',
-        'Ubuntu',
-        '-u',
-        'root',
-        '--',
-        'bash',
-        '-lc',
-        'NODE_OPTIONS=--dns-result-order=ipv4first openclaw gateway run'
-      ],
+      buildWslOpenClawCommandArgs(['gateway', 'run'], {
+        env: {
+          NODE_OPTIONS: '--dns-result-order=ipv4first'
+        }
+      }),
       { stdio: ['ignore', 'pipe', 'pipe'] }
     )
 

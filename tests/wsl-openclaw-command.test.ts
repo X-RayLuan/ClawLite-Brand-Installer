@@ -35,3 +35,15 @@ test('buildWslOpenClawCommandArgs wraps commands in bash -lc for WSL', () => {
   assert.match(args[7], /command -v openclaw/)
   assert.match(args[7], /exec "\$OPENCLAW_BIN" 'doctor' '--fix'/)
 })
+
+test('buildWslOpenClawCommandArgs can export env before invoking the resolved binary', () => {
+  const args = buildWslOpenClawCommandArgs(['gateway', 'run'], {
+    env: {
+      NODE_OPTIONS: '--dns-result-order=ipv4first'
+    }
+  })
+
+  assert.equal(args[6], '-lc')
+  assert.match(args[7], /export NODE_OPTIONS='--dns-result-order=ipv4first'/)
+  assert.match(args[7], /exec "\$OPENCLAW_BIN" 'gateway' 'run'/)
+})
