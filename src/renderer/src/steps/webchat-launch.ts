@@ -6,6 +6,87 @@ export function buildWebChatUrl(token: string): string {
   return `http://127.0.0.1:18791/#${params.toString()}`
 }
 
+interface ConfigReadResult {
+  success: boolean
+  config?: {
+    gatewayToken?: string
+  } | null
+}
+
+function normalizeToken(token: string | null | undefined): string | null {
+  const normalized = token?.trim()
+  return normalized ? normalized : null
+}
+
+export async function waitForStableGatewayToken(params: {
+  initialToken: string | null
+  readConfig: () => Promise<ConfigReadResult>
+  attempts?: number
+  delayMs?: number
+  sleep?: (ms: number) => Promise<void>
+}): Promise<string | null> {
+  const attempts = params.attempts ?? 8
+  const delayMs = params.delayMs ?? 400
+  const sleep =
+    params.sleep ??
+    ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)))
+
+  let lastToken = normalizeToken(params.initialToken)
+  let stableReads = lastToken ? 1 : 0
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const result = await params.readConfig()
+    const nextToken = normalizeToken(result.config?.gatewayToken)
+
+    if (nextToken && nextToken === lastToken) {
+      stableReads += 1
+      if (stableReads >= 2) {
+        return nextToken
+      }
+    } else if (nextToken) {
+      lastToken = nextToken
+      stableReads = 1
+    } else {
+      lastToken = null
+      stableReads = 0
+    }
+
+    if (attempt < attempts - 1) {
+      await sleep(delayMs)
+    }
+  }
+
+  return null
+}
+
+export async function openWebChatExternally(params: {
+  initialToken: string | null
+  readConfig: () => Promise<ConfigReadResult>
+  openExternal: (url: string) => Promise<{ success: boolean; error?: string }>
+  attempts?: number
+  delayMs?: number
+  sleep?: (ms: number) => Promise<void>
+}): Promise<{ success: boolean; error?: string; token?: string }> {
+  const token = await waitForStableGatewayToken({
+    initialToken: params.initialToken,
+    readConfig: params.readConfig,
+    attempts: params.attempts,
+    delayMs: params.delayMs,
+    sleep: params.sleep
+  })
+
+  if (!token) {
+    return { success: false, error: 'Web Chat token missing. Please re-run setup or switch provider.' }
+  }
+
+  const opened = await params.openExternal(buildWebChatUrl(token))
+  if (!opened.success) {
+    return { success: false, error: opened.error || 'Failed to open Web Chat in your browser.' }
+  }
+
+  return { success: true, token }
+}
+
 export function shouldResetMainSessionOnOpen(params: {
   freshSessionRequested: boolean
   freshSessionConsumed: boolean

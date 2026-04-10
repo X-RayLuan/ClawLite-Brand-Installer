@@ -23,7 +23,6 @@ import {
   setGatewayLogCallback
 } from './services/gateway'
 import { prepareMainSession, resetMainSession } from './services/webchat-session'
-import { openWebChatWindow } from './services/webchat-window'
 import { checkWslState } from './services/wsl-utils'
 import { checkForUpdates, downloadUpdate, installUpdate } from './services/updater'
 import { uninstallOpenClaw } from './services/uninstaller'
@@ -31,6 +30,7 @@ import { exportBackup, importBackup } from './services/backup'
 import { loginOpenAICodex } from './services/oauth'
 import { activationController } from './services/activation-controller'
 import { readEmailFromInstallSource } from './services/install-source'
+import { isAllowedExternalUrl } from './services/external-links'
 
 interface WizardPersistedState {
   step: string
@@ -336,14 +336,6 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
       return { success: false, error: e instanceof Error ? e.message : String(e) }
     }
   })
-  ipcMain.handle('webchat:open', async (_event, url: string) => {
-    try {
-      return await openWebChatWindow(url, { BrowserWindow })
-    } catch (e) {
-      return { success: false, error: e instanceof Error ? e.message : String(e) }
-    }
-  })
-
   ipcMain.handle('troubleshoot:check-port', () => checkPort())
   ipcMain.handle('troubleshoot:doctor-fix', () => runDoctorFix(win()))
 
@@ -396,15 +388,7 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
   // External link opener
   ipcMain.handle('system:open-external', async (_e, url: string) => {
     try {
-      const parsed = new URL(url)
-      const isHttps = parsed.protocol === 'https:'
-      const isTelegram = parsed.protocol === 'tg:'
-      const isLocalWebChat =
-        parsed.protocol === 'http:' &&
-        (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost') &&
-        parsed.port === '18789'
-
-      if (!(isHttps || isTelegram || isLocalWebChat)) {
+      if (!isAllowedExternalUrl(url)) {
         return { success: false, error: 'URL not allowed' }
       }
 

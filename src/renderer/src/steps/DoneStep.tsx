@@ -8,7 +8,7 @@ import ManagementModal from '../components/ManagementModal'
 import ProviderSwitchModal from '../components/ProviderSwitchModal'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { useManagement } from '../hooks/useManagement'
-import { buildWebChatUrl, shouldResetMainSessionOnOpen } from './webchat-launch'
+import { openWebChatExternally, shouldResetMainSessionOnOpen } from './webchat-launch'
 import {
   describeWebChatOpenState,
   getWebChatReadinessPlan,
@@ -142,6 +142,7 @@ export default function DoneStep({
 
   const openWebChat = async (): Promise<void> => {
     setWebChatOpenStage('preparing_session')
+    let keepLoading = false
 
     try {
       // Avoid stale UI state blocking WebChat: verify live gateway status once
@@ -152,23 +153,6 @@ export default function DoneStep({
         } else {
           setLogs((prev) => [...prev, 'Gateway is still starting. Trying to open Web Chat anyway...'])
         }
-      }
-
-      let token = gatewayToken
-
-      // Re-read config once to avoid race where token is written slightly later
-      if (!token) {
-        const r = await window.electronAPI.config.read()
-        if (r.success && r.config?.gatewayToken) {
-          token = r.config.gatewayToken
-          setGatewayToken(token)
-        }
-      }
-
-      if (!token) {
-        setLogs((prev) => [...prev, 'Web Chat token missing. Please re-run setup or switch provider.'])
-        setShowLogs(true)
-        return
       }
 
       if (
@@ -207,14 +191,22 @@ export default function DoneStep({
       }
 
       setWebChatOpenStage('opening')
-      const url = buildWebChatUrl(token)
-      const openResult = await window.electronAPI.webchat.open(url)
+      const openResult = await openWebChatExternally({
+        initialToken: gatewayToken,
+        readConfig: () => window.electronAPI.config.read(),
+        openExternal: (url) => window.electronAPI.system.openExternal(url)
+      })
       if (!openResult.success) {
         setLogs((prev) => [...prev, `Failed to open Web Chat: ${openResult.error || 'unknown error'}`])
         setShowLogs(true)
+        keepLoading = true
+        return
       }
+      setGatewayToken(openResult.token || gatewayToken)
     } finally {
-      setWebChatOpenStage(null)
+      if (!keepLoading) {
+        setWebChatOpenStage(null)
+      }
     }
   }
 

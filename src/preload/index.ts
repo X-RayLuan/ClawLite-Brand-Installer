@@ -109,10 +109,6 @@ const electronAPI = {
       return () => ipcRenderer.removeListener('gateway:status-changed', handler)
     }
   },
-  webchat: {
-    open: (url: string): Promise<{ success: boolean; error?: string }> =>
-      ipcRenderer.invoke('webchat:open', url)
-  },
   troubleshoot: {
     checkPort: (): Promise<{ inUse: boolean; pid?: string }> =>
       ipcRenderer.invoke('troubleshoot:check-port'),
