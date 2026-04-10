@@ -13,6 +13,24 @@ interface ConfigReadResult {
   } | null
 }
 
+async function defaultProbeUrl(url: string): Promise<boolean> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 1000)
+
+  try {
+    await fetch(url, {
+      method: 'GET',
+      cache: 'no-store',
+      signal: controller.signal
+    })
+    return true
+  } catch {
+    return false
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 function normalizeToken(token: string | null | undefined): string | null {
   const normalized = token?.trim()
   return normalized ? normalized : null
@@ -59,9 +77,38 @@ export async function waitForStableGatewayToken(params: {
   return null
 }
 
+export async function waitForWebChatServicesReady(params: {
+  probeUrl?: (url: string) => Promise<boolean>
+  attempts?: number
+  delayMs?: number
+  sleep?: (ms: number) => Promise<void>
+}): Promise<boolean> {
+  const probeUrl = params.probeUrl ?? defaultProbeUrl
+  const attempts = params.attempts ?? 10
+  const delayMs = params.delayMs ?? 400
+  const sleep =
+    params.sleep ??
+    ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)))
+  const urls = ['http://127.0.0.1:18789/', 'http://127.0.0.1:18791/']
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const checks = await Promise.all(urls.map((url) => probeUrl(url)))
+    if (checks.every(Boolean)) {
+      return true
+    }
+
+    if (attempt < attempts - 1) {
+      await sleep(delayMs)
+    }
+  }
+
+  return false
+}
+
 export async function openWebChatExternally(params: {
   initialToken: string | null
   readConfig: () => Promise<ConfigReadResult>
+  probeUrl?: (url: string) => Promise<boolean>
   openExternal: (url: string) => Promise<{ success: boolean; error?: string }>
   attempts?: number
   delayMs?: number
@@ -77,6 +124,16 @@ export async function openWebChatExternally(params: {
 
   if (!token) {
     return { success: false, error: 'Web Chat token missing. Please re-run setup or switch provider.' }
+  }
+
+  const servicesReady = await waitForWebChatServicesReady({
+    probeUrl: params.probeUrl,
+    attempts: params.attempts,
+    delayMs: params.delayMs,
+    sleep: params.sleep
+  })
+  if (!servicesReady) {
+    return { success: false, error: 'Web Chat server is not ready yet. Please keep waiting.' }
   }
 
   const opened = await params.openExternal(buildWebChatUrl(token))
