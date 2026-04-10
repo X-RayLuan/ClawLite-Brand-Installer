@@ -194,6 +194,29 @@ export default function DoneStep({
       const openResult = await openWebChatExternally({
         initialToken: gatewayToken,
         readConfig: () => window.electronAPI.config.read(),
+        onEvent: (event) => {
+          if (event.type === 'token_stable') {
+            setLogs((prev) => [...prev, `Web Chat token stabilized (len=${event.token.length}).`])
+            return
+          }
+          if (event.type === 'probe_result') {
+            setLogs((prev) => [
+              ...prev,
+              `Web Chat probe ${event.ready ? 'ready' : 'waiting'}: ${event.url}`
+            ])
+            return
+          }
+          if (event.type === 'open_external_start') {
+            setLogs((prev) => [...prev, `Launching Web Chat in browser: ${event.url}`])
+            return
+          }
+          if (event.type === 'open_external_result') {
+            setLogs((prev) => [
+              ...prev,
+              `Browser launch ${event.success ? 'succeeded' : 'failed'}${event.error ? `: ${event.error}` : '.'}`
+            ])
+          }
+        },
         openExternal: (url) => window.electronAPI.system.openExternal(url)
       })
       if (!openResult.success) {

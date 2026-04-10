@@ -59,10 +59,17 @@ test('openWebChatExternally opens the browser only after the gateway token stabi
   ]
   const opened: string[] = []
   const probes: string[] = []
+  const events: string[] = []
 
   const result = await openWebChatExternally({
     initialToken: 'stale-token',
     readConfig: async () => reads.shift() ?? { success: true, config: { gatewayToken: 'next-token' } },
+    onEvent: (event) => {
+      if (event.type === 'token_stable') events.push(`token:${event.token}`)
+      if (event.type === 'probe_result') events.push(`probe:${event.url}:${event.ready ? 'ready' : 'waiting'}`)
+      if (event.type === 'open_external_start') events.push(`open:${event.url}`)
+      if (event.type === 'open_external_result') events.push(`result:${event.success ? 'success' : 'failure'}`)
+    },
     probeUrl: async (url) => {
       probes.push(url)
       return true
@@ -78,6 +85,12 @@ test('openWebChatExternally opens the browser only after the gateway token stabi
 
   assert.deepEqual(result, { success: true, token: 'next-token' })
   assert.deepEqual(probes, ['http://127.0.0.1:18791/'])
+  assert.deepEqual(events, [
+    'token:next-token',
+    'probe:http://127.0.0.1:18791/:ready',
+    'open:http://127.0.0.1:18791/#gatewayUrl=ws%3A%2F%2F127.0.0.1%3A18789&token=next-token',
+    'result:success'
+  ])
   assert.deepEqual(opened, [
     'http://127.0.0.1:18791/#gatewayUrl=ws%3A%2F%2F127.0.0.1%3A18789&token=next-token'
   ])
