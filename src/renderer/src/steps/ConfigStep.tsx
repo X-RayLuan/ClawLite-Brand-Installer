@@ -4,6 +4,7 @@ import LobsterLogo from '../components/LobsterLogo'
 import Button from '../components/Button'
 import LogViewer from '../components/LogViewer'
 import { useInstallLogs } from '../hooks/useIpc'
+import { getPrefilledConfigCompletionError } from './config-completion'
 
 type Provider = 'anthropic' | 'google' | 'openai' | 'minimax' | 'glm'
 
@@ -85,6 +86,16 @@ export default function ConfigStep({
     clearLogs()
     try {
       if (apiKeyPreFilled) {
+        const configResult = await window.electronAPI.config.read()
+        const completionError = getPrefilledConfigCompletionError(
+          configResult.success ? configResult.config : null
+        )
+
+        if (completionError) {
+          setError(completionError)
+          return
+        }
+
         if (botToken) {
           const result = await window.electronAPI.config.setTelegramToken(botToken)
           if (result.success) {

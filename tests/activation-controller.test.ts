@@ -429,6 +429,13 @@ test('injectConfig switches the default route and main agent to clawrouter witho
     assert.deepEqual(written.agents.list[0].model.fallbacks, ['ezrouter/claude-sonnet-4-6'])
     assert.equal(written.agents.list[1].model.primary, 'openai-codex/gpt-5.4')
     assert.deepEqual(written.agents.list[1].model.fallbacks, ['minimax/MiniMax-M2.5'])
+    assert.equal(written.gateway.mode, 'local')
+    assert.equal(written.gateway.bind, 'custom')
+    assert.equal(written.gateway.customBindHost, '127.0.0.1')
+    assert.equal(written.gateway.auth.mode, 'token')
+    assert.match(written.gateway.auth.token, /^[a-f0-9]{48}$/)
+    assert.equal(written.gateway.remote.url, 'ws://127.0.0.1:18789')
+    assert.equal(written.gateway.remote.token, written.gateway.auth.token)
   } finally {
     globalThis.fetch = originalFetch
     process.env.CLAWLITE_ACTIVATION_API_BASE = prevBase

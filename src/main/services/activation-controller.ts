@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { randomBytes } from 'crypto'
 import { homedir, platform } from 'os'
 import { join } from 'path'
 import type {
@@ -292,6 +293,44 @@ function setDefaultAgentModelRoute(
         fallbacks: mainFallbacks
       }
     }
+  }
+}
+
+function ensureLocalGatewayConfig(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  cfg: any
+): void {
+  cfg.gateway = cfg.gateway ?? {}
+  cfg.gateway.port = 18789
+  cfg.gateway.mode = 'local'
+  cfg.gateway.bind = 'custom'
+  cfg.gateway.customBindHost = '127.0.0.1'
+  cfg.gateway.controlUi = cfg.gateway.controlUi ?? {}
+  cfg.gateway.controlUi.allowedOrigins = [
+    'http://localhost:18789',
+    'http://127.0.0.1:18789'
+  ]
+
+  cfg.gateway.auth = cfg.gateway.auth ?? {}
+  cfg.gateway.auth.mode = 'token'
+
+  const existingToken =
+    typeof cfg.gateway.auth.token === 'string' && cfg.gateway.auth.token.trim()
+      ? cfg.gateway.auth.token.trim()
+      : null
+  const token = existingToken ?? randomBytes(24).toString('hex')
+  cfg.gateway.auth.token = token
+
+  cfg.gateway.tailscale = {
+    mode: 'off',
+    resetOnExit: false,
+    ...cfg.gateway.tailscale
+  }
+
+  cfg.gateway.remote = {
+    ...cfg.gateway.remote,
+    url: 'ws://127.0.0.1:18789',
+    token
   }
 }
 
@@ -617,6 +656,7 @@ export class ActivationController {
 
       if (patchProvider === 'clawrouter') {
         setDefaultAgentModelRoute(cfg, 'clawrouter/claude-sonnet-4-6')
+        ensureLocalGatewayConfig(cfg)
       }
 
       const serialized = JSON.stringify(ocConfig, null, 2)
