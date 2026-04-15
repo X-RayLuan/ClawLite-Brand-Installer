@@ -11,6 +11,17 @@ export const isWslRebootRequiredText = (text: string): boolean => {
   )
 }
 
+export const isWslAlreadyExistsText = (text: string): boolean => {
+  const lower = text.toLowerCase()
+  return (
+    lower.includes('error_already_exists') ||
+    lower.includes('already exists') ||
+    lower.includes('already installed') ||
+    lower.includes('installdistro/error_already_exists') ||
+    text.includes('已存在具有所提供名称的分发')
+  )
+}
+
 export const isLikelySuccessfulWslInstallResult = (input: {
   finalExitCode?: number | null
   reached?: boolean

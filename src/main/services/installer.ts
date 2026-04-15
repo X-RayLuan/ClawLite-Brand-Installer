@@ -14,7 +14,11 @@ import {
 import { createDecodedLineCollector } from './stream-lines'
 import { decodeWindowsCommandOutput } from './windows-output-decoder'
 import { classifyWslInstallFailure } from './wsl-error-message'
-import { isLikelySuccessfulWslInstallResult, isWslRebootRequiredText } from './wsl-install-result'
+import {
+  isLikelySuccessfulWslInstallResult,
+  isWslAlreadyExistsText,
+  isWslRebootRequiredText
+} from './wsl-install-result'
 import { t } from '../../shared/i18n/main'
 
 type ProgressCallback = (msg: string) => void
@@ -240,15 +244,16 @@ export const installWsl = async (win: BrowserWindow): Promise<{ needsReboot: boo
     log('WSL installation error details:')
     log(combined)
 
-    // exit 4294967295 = ERROR_ALREADY_EXISTS: Ubuntu already registered
-    if (combined.includes('4294967295')) {
+    // Existing distro is resumable: re-check/init instead of treating as install failure.
+    if (combined.includes('4294967295') || isWslAlreadyExistsText(combined)) {
       log(t('installer.ubuntuAlreadyRegistered'))
       try {
         await runInWsl('echo initialized', 30000)
         log(t('installer.ubuntuInitDone'))
         return { needsReboot: false }
       } catch {
-        throw new Error(classifyWslInstallFailure({ combined, alreadyRegistered: true }))
+        log('Ubuntu is already registered but not fully initialized yet. Re-checking WSL state.')
+        return { needsReboot: false }
       }
     }
     const lower = combined.toLowerCase()
