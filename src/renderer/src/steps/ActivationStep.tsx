@@ -33,6 +33,9 @@ function EmailStep({
     setIsSending(true)
     try {
       await onSendCode(email)
+    } catch (err) {
+      // Defensive: if onSendCode throws unexpectedly, show error without crashing
+      setLocalError(err instanceof Error ? err.message : 'An unexpected error occurred')
     } finally {
       setIsSending(false)
     }
@@ -539,8 +542,10 @@ export default function ActivationStep({
     [pendingEmail, bootstrap, runProvisioningChain, onActivationComplete, t]
   )
 
+  // Resend uses the same working state as handleOtpSendCode — no extra setWorking
   const handleOtpResend = useCallback(async (): Promise<void> => {
     if (cooldownSecs > 0) return
+    // Re-use the same flow — just call handleOtpSendCode which manages working state itself
     await handleOtpSendCode(pendingEmail)
   }, [cooldownSecs, pendingEmail, handleOtpSendCode])
 

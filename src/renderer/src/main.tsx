@@ -41,12 +41,18 @@ const initApp = async (): Promise<void> => {
 }
 
 window.addEventListener('error', (e) => {
-  renderFatal(e.message || 'Unknown renderer error')
+  const msg = e.error?.stack || e.error?.message || e.message || 'Unknown renderer error'
+  console.error('[renderer uncaught]', msg)
+  renderFatal(msg)
 })
 
 window.addEventListener('unhandledrejection', (e) => {
   const reason = (e as PromiseRejectionEvent).reason
-  renderFatal(reason instanceof Error ? reason.message : String(reason))
+  const msg = reason instanceof Error
+    ? reason.stack || reason.message
+    : String(reason)
+  console.error('[renderer unhandledrejection]', msg)
+  renderFatal(msg)
 })
 
 initApp()

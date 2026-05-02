@@ -125,8 +125,7 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
       const resp = await fetch('https://clawlite.ai/api/installer/activation/bootstrap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform: 'installer', installerInstanceId: installerInstanceId || undefined }),
-        signal: AbortSignal.timeout(8000)
+        body: JSON.stringify({ platform: 'installer', installerInstanceId: installerInstanceId || undefined })
       })
       if (resp.ok) {
         const bootstrap = await resp.json()
