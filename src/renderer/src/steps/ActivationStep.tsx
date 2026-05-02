@@ -315,7 +315,7 @@ export default function ActivationStep({
   const [manualKeyInput, setManualKeyInput] = useState('')
 
   // ── OTP flow state ──────────────────────────────────────────────────────────
-  const [otpView, setOtpView] = useState<OtpView>('buy')
+  const [otpView, setOtpView] = useState<OtpView>('email')
   const [pendingEmail, setPendingEmail] = useState('')
   const [cooldownSecs, setCooldownSecs] = useState(0)
   const [otpError, setOtpError] = useState<string | null>(null)
@@ -742,7 +742,7 @@ export default function ActivationStep({
                     variant="secondary"
                     size="sm"
                     onClick={() => setOtpView('email')}
-                    disabled={!email.trim() || working || loading}
+                    disabled={working || loading}
                   >
                     Use Email+OTP
                   </Button>
