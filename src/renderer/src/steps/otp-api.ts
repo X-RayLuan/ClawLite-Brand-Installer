@@ -1,6 +1,5 @@
 /**
  * OTP API helpers for the email+OTP verification flow.
- * Endpoints are at the same base as the installer activation API.
  */
 
 const API_BASE = (() => {
@@ -10,24 +9,35 @@ const API_BASE = (() => {
   return 'https://clawlite.ai/api'
 })()
 
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout>
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error('Request timed out')), ms)
+  })
+  try {
+    return await Promise.race([promise, timeout])
+  } finally {
+    clearTimeout(timeoutId!)
+  }
+}
+
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path}`
-  try {
-    const res = await fetch(url, {
+  const res = await withTimeout(
+    fetch(url, {
       headers: { 'Content-Type': 'application/json' },
       ...options
-    })
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      const err: any = new Error((data as { error?: string }).error || `HTTP ${res.status}`)
-      err._body = data
-      err._status = res.status
-      throw err
-    }
-    return data as T
-  } catch (e) {
-    throw e
+    }),
+    15000
+  )
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    const err: any = new Error((data as { error?: string }).error || `HTTP ${res.status}`)
+    err._body = data
+    err._status = res.status
+    throw err
   }
+  return data as T
 }
 
 export interface OtpSendResult {
@@ -41,22 +51,19 @@ export interface OtpVerifyResult {
   email?: string
   isActive?: boolean
   error?: string
-  // Backend may return "balance" instead of "balanceUsd"
   balance?: number
 }
 
 export async function sendOtp(email: string): Promise<OtpSendResult> {
   return apiFetch<OtpSendResult>('/auth/otp/send', {
     method: 'POST',
-    body: JSON.stringify({ email }),
-    signal: AbortSignal.timeout(15000)
+    body: JSON.stringify({ email })
   })
 }
 
 export async function verifyOtp(email: string, code: string): Promise<OtpVerifyResult> {
   return apiFetch<OtpVerifyResult>('/installer/auth/verify-otp', {
     method: 'POST',
-    body: JSON.stringify({ email, code }),
-    signal: AbortSignal.timeout(15000)
+    body: JSON.stringify({ email, code })
   })
 }
