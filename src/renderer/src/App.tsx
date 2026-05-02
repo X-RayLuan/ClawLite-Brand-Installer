@@ -86,6 +86,14 @@ function App(): React.JSX.Element {
       setIsWindows(env.os === 'windows')
       if (env.wslState) setWslState(env.wslState)
 
+      // Check if already activated (skip activation step if so)
+      const act = await window.electronAPI.activation.check()
+      if (act.activated) {
+        setActivatedViaClawRouter(true)
+        goTo('telegramGuide')
+        return
+      }
+
       // Restore state after reboot — run after wslState is correctly set
       const state = await window.electronAPI.wizard.loadState()
       if (state) {

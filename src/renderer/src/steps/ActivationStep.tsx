@@ -383,6 +383,16 @@ export default function ActivationStep({
         setSnapshot(next)
       }
       if (next.phase === 'completed') {
+        // Save activation state to activation.json before completing
+        const apiKey = snapshot?.provisioning?.credentialRef || ''
+        const baseUrl = 'https://clawlite.ai/api/openai/v1'
+        void window.electronAPI.activation.save({
+          email: email || '',
+          licenseType: 'unknown',
+          expiresAt: null,
+          apiKey,
+          baseUrl
+        })
         onActivationComplete()
         return
       }

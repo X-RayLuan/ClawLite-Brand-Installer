@@ -56,7 +56,17 @@ const electronAPI = {
     }): Promise<{ success: boolean; message: string }> =>
       ipcRenderer.invoke('activation:inject-manual-key', input),
     readInstallEmail: (): Promise<string | null> =>
-      ipcRenderer.invoke('activation:read-install-email')
+      ipcRenderer.invoke('activation:read-install-email'),
+    check: (installerInstanceId?: string) =>
+      ipcRenderer.invoke('activation:check', installerInstanceId),
+    save: (info: {
+      email: string
+      licenseType: 'annual' | 'lifetime' | 'trial' | 'unknown'
+      expiresAt: string | null
+      apiKey: string
+      baseUrl: string
+    }) => ipcRenderer.invoke('activation:save', info),
+    logout: () => ipcRenderer.invoke('activation:logout')
   },
   install: {
     node: (): Promise<{ success: boolean; error?: string }> => ipcRenderer.invoke('install:node'),

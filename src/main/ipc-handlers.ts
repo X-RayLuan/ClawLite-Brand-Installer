@@ -1,8 +1,9 @@
 import { ipcMain, BrowserWindow, app } from 'electron'
 import { spawn, spawnSync } from 'child_process'
 import { platform } from 'os'
+import { randomBytes } from 'crypto'
 import { join } from 'path'
-import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync } from 'fs'
 import i18nMain, { initI18nMain } from '../shared/i18n/main'
 import { rebuildTrayMenu } from './services/tray-manager'
 import { checkEnvironment, checkOpenclawUpdate } from './services/env-checker'
@@ -103,6 +104,129 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
     'activation:inject-manual-key',
     (_e, input: { provider: 'clawrouter' | 'ezrouter'; apiKey: string; targetConfigPath: string }) =>
       activationController.injectManualKey(input)
+  )
+
+  // ─── Activation persistence (activation.json) ───────────────────────────────
+  const getActivationPath = (): string => join(app.getPath('userData'), 'activation.json')
+
+  ipcMain.handle('activation:check', async (_event, installerInstanceId?: string) => {
+    const path = getActivationPath()
+    if (!existsSync(path)) return { activated: false }
+
+    let data: any
+    try {
+      data = JSON.parse(readFileSync(path, 'utf-8'))
+    } catch {
+      return { activated: false }
+    }
+
+    // Verify entitlement with backend — local file alone is not sufficient
+    try {
+      const resp = await fetch('https://clawlite.ai/api/installer/activation/bootstrap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: 'installer', installerInstanceId: installerInstanceId || undefined }),
+        signal: AbortSignal.timeout(8000)
+      })
+      if (resp.ok) {
+        const bootstrap = await resp.json()
+        if (bootstrap.entitlement?.status !== 'active') {
+          try { unlinkSync(path) } catch { /* ignore */ }
+          return { activated: false }
+        }
+      }
+    } catch {
+      // Network error — trust local file (graceful degradation)
+    }
+
+    return {
+      activated: true,
+      activationInfo: {
+        email: data.email || '',
+        licenseType: data.licenseType || 'unknown',
+        expiresAt: data.expiresAt || null,
+        apiKey: data.apiKey || '',
+        baseUrl: data.baseUrl || ''
+      }
+    }
+  })
+
+  ipcMain.handle('activation:logout', () => {
+    try {
+      const path = getActivationPath()
+      if (existsSync(path)) unlinkSync(path)
+      return { success: true }
+    } catch {
+      return { success: false }
+    }
+  })
+
+  ipcMain.handle(
+    'activation:save',
+    (
+      _e,
+      info: {
+        email: string
+        licenseType: 'annual' | 'lifetime' | 'trial' | 'unknown'
+        expiresAt: string | null
+        apiKey: string
+        baseUrl: string
+      }
+    ) => {
+      try {
+        const path = getActivationPath()
+        writeFileSync(path, JSON.stringify(info, null, 2))
+
+        // Also ensure clawlite provider config in ~/.openclaw/openclaw.json
+        try {
+          const openClawDir = join(app.getPath('home'), '.openclaw')
+          const openClawConfigPath = join(openClawDir, 'openclaw.json')
+          let ocConfig: Record<string, unknown> = {}
+          if (existsSync(openClawConfigPath)) {
+            ocConfig = JSON.parse(readFileSync(openClawConfigPath, 'utf-8')) as typeof ocConfig
+          }
+          const cfg = ocConfig as Record<string, unknown>
+          cfg.models = (cfg.models as Record<string, unknown>) || {}
+          ;(cfg.models as Record<string, unknown>).providers = (cfg.models as Record<string, Record<string, unknown>>).providers || {}
+          const providers = (cfg.models as Record<string, Record<string, unknown>>).providers
+          const resolvedApiKey = info.apiKey && !info.apiKey.startsWith('{') ? info.apiKey : ''
+          providers!['clawlite'] = {
+            baseUrl: info.baseUrl,
+            apiKey: resolvedApiKey,
+            api: 'openai-completions',
+            models: [
+              {
+                id: 'gpt-5.4',
+                name: 'GPT-5.4',
+                input: ['text', 'image'],
+                cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+                contextWindow: 200000,
+                maxTokens: 32000,
+                reasoning: true
+              }
+            ]
+          }
+          cfg.agents = (cfg.agents as Record<string, unknown>) || {}
+          ;(cfg.agents as Record<string, unknown>).defaults = (cfg.agents as Record<string, Record<string, unknown>>).defaults || {}
+          ;(cfg.agents as Record<string, Record<string, unknown>>).defaults!['model'] = 'clawlite/gpt-5.4'
+          ;(cfg.agents as Record<string, unknown>).default = (cfg.agents as Record<string, Record<string, unknown>>).default || {}
+          ;(cfg.agents as Record<string, Record<string, unknown>>).default!['provider'] = 'clawlite'
+          if (!cfg.gateway) cfg.gateway = {}
+          if (!(cfg.gateway as Record<string, unknown>).auth) (cfg.gateway as Record<string, unknown>).auth = {}
+          if (!(cfg.gateway as Record<string, Record<string, unknown>>).auth!['token']) {
+            ;(cfg.gateway as Record<string, Record<string, unknown>>).auth!['token'] = randomBytes(32).toString('hex')
+          }
+          if (!existsSync(openClawDir)) mkdirSync(openClawDir, { recursive: true })
+          writeFileSync(openClawConfigPath, JSON.stringify(ocConfig, null, 2), { mode: 0o600 })
+        } catch (writeErr) {
+          console.error('[activation:save] failed to write openclaw config:', writeErr)
+        }
+
+        return { success: true }
+      } catch {
+        return { success: false }
+      }
+    }
   )
 
   // WSL-related IPC

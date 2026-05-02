@@ -53,6 +53,24 @@ interface ElectronAPI {
       targetConfigPath: string
     }) => Promise<{ success: boolean; message: string }>
     readInstallEmail: () => Promise<string | null>
+    check: (installerInstanceId?: string) => Promise<{
+      activated: boolean
+      activationInfo?: {
+        email: string
+        licenseType: string
+        expiresAt: string | null
+        apiKey: string
+        baseUrl: string
+      }
+    }>
+    save: (info: {
+      email: string
+      licenseType: 'annual' | 'lifetime' | 'trial' | 'unknown'
+      expiresAt: string | null
+      apiKey: string
+      baseUrl: string
+    }) => Promise<{ success: boolean }>
+    logout: () => Promise<{ success: boolean }>
   }
   install: {
     node: () => Promise<{ success: boolean; error?: string }>
