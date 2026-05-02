@@ -574,12 +574,15 @@ export class ActivationController {
       cfg.agents.default = cfg.agents.default || {}
       cfg.agents.default.provider = 'clawlite'
 
-      // Generate and write gateway token if not already present
+      // Generate and write gateway config
       if (!cfg.gateway) cfg.gateway = {}
       if (!cfg.gateway.auth) cfg.gateway.auth = {}
       if (!cfg.gateway.auth.token) {
         cfg.gateway.auth.token = require('crypto').randomBytes(32).toString('hex')
       }
+      // Set gateway to local mode
+      cfg.gateway.mode = 'local'
+      cfg.gateway.bind = 'loopback'
 
       const serialized = JSON.stringify(ocConfig, null, 2)
       if (isWindowsWslTargetPath(targetPath)) {
