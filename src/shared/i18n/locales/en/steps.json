@@ -125,6 +125,56 @@
     "errors": {
       "bootstrap": "Failed to resolve the installer session.",
       "generic": "Activation failed. Please retry or continue with your own API key."
+    },
+    "email": {
+      "title": "Activate ClawLite",
+      "subtitle": "Enter your registered email to receive a verification code",
+      "placeholder": "your@email.com",
+      "sendCode": "Send Verification Code",
+      "invalid": "Please enter a valid email address",
+      "sending": "Sending..."
+    },
+    "verify": {
+      "title": "Enter Code",
+      "subtitle": "We sent a 6-digit code to {{email}}",
+      "changeEmail": "Change email",
+      "resend": "Resend code",
+      "resendCooldown": "Resend in {{secs}}s",
+      "verifying": "Verifying...",
+      "invalidCode": "Invalid verification code"
+    },
+    "topup": {
+      "title": "Add Credits",
+      "subtitle": "Your account has no credits. Add credits to activate ClawLite.",
+      "amount5": "$5",
+      "amount10": "$10",
+      "amount20": "$20",
+      "credits": "credits",
+      "back": "Go back"
+    },
+    "pendingTopup": {
+      "title": "Complete Payment",
+      "subtitle": "Please complete the payment in the opened browser.",
+      "hint": "Return here after payment — activation will continue automatically.",
+      "checking": "Checking payment status...",
+      "cancel": "Cancel"
+    },
+    "activated": {
+      "title": "Activated!",
+      "subtitle": "Your ClawLite is ready",
+      "email": "Account",
+      "balance": "Balance",
+      "license": "License",
+      "expires": "Expires",
+      "apiKey": "API Key",
+      "baseUrl": "Base URL",
+      "copyKey": "Copy API Key",
+      "copyUrl": "Copy Base URL",
+      "launch": "Launch ClawLite",
+      "logout": "Sign out"
+    },
+    "footer": {
+      "secure": "Your data is encrypted and secure"
     }
   },
   "apiKeyGuide": {

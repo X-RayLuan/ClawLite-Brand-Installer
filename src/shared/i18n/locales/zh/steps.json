@@ -173,5 +173,96 @@
       "available": "端口 18789 可用",
       "failed": "端口检查失败"
     }
+  },
+  "activation": {
+    "title": "激活 ClawRouter",
+    "desc": "将此安装器绑定到您的 ClawLite 账户，需要时购买，并自动配置 OpenClaw，无需暴露原始密钥。",
+    "statusLabel": "激活状态",
+    "loading": "正在解析安装器会话...",
+    "refresh": "刷新",
+    "recommended": "推荐",
+    "accountBound": "安装器会话已绑定至 {{emailMasked}}",
+    "phase": {
+      "session_binding_pending": "正在解析下载会话",
+      "ready_for_activation": "准备激活",
+      "purchase_pending": "等待购买确认",
+      "provisioning": "正在绑定 ClawRouter 凭证",
+      "config_injection": "正在准备 OpenClaw 配置补丁",
+      "validation": "正在测试 ClawRouter 连接",
+      "completed": "ClawRouter 已连接",
+      "skipped_to_byok": "继续使用您自己的 API 密钥",
+      "manual_path_only": "账户绑定不可用，仅支持自带密钥",
+      "error": "激活需要关注"
+    },
+    "paths": {
+      "connectTitle": "已购买",
+      "connectDesc": "如果您已拥有 ClawRouter/EZRouter，立即连接。",
+      "connectCta": "已购买",
+      "buyTitle": "以折扣价购买 ClawRouter",
+      "buyDesc": "使用折扣 ClawRouter 结账快速开始。",
+      "buyCta": "以折扣价购买 ClawRouter",
+      "ownKeyTitle": "使用我的 API 密钥",
+      "ownKeyDesc": "继续使用您自己的密钥，跳过 ClawRouter 绑定。",
+      "ownKeyCta": "使用我的 API 密钥"
+    },
+    "summary": {
+      "title": "配置摘要",
+      "binding": "凭证引用：{{credentialRef}}",
+      "target": "配置目标：{{configTarget}}"
+    },
+    "errors": {
+      "bootstrap": "无法解析安装器会话。",
+      "generic": "激活失败，请重试或继续使用您自己的 API 密钥。"
+    },
+    "email": {
+      "title": "激活 ClawLite",
+      "subtitle": "输入您注册的电子邮件地址以接收验证码",
+      "placeholder": "your@email.com",
+      "sendCode": "发送验证码",
+      "invalid": "请输入有效的电子邮件地址",
+      "sending": "发送中..."
+    },
+    "verify": {
+      "title": "输入验证码",
+      "subtitle": "我们已向 {{email}} 发送6位数字验证码",
+      "changeEmail": "更换邮箱",
+      "resend": "重新发送",
+      "resendCooldown": "{{secs}}秒后可重新发送",
+      "verifying": "验证中...",
+      "invalidCode": "验证码无效"
+    },
+    "topup": {
+      "title": "添加积分",
+      "subtitle": "您的账户没有积分，请添加积分以激活 ClawLite。",
+      "amount5": "$5",
+      "amount10": "$10",
+      "amount20": "$20",
+      "credits": "积分",
+      "back": "返回"
+    },
+    "pendingTopup": {
+      "title": "完成支付",
+      "subtitle": "请在打开的浏览器中完成支付。",
+      "hint": "支付完成后返回此处——激活将自动继续。",
+      "checking": "正在检查支付状态...",
+      "cancel": "取消"
+    },
+    "activated": {
+      "title": "已激活！",
+      "subtitle": "您的 ClawLite 已就绪",
+      "email": "账户",
+      "balance": "余额",
+      "license": "许可证",
+      "expires": "到期时间",
+      "apiKey": "API 密钥",
+      "baseUrl": "基础 URL",
+      "copyKey": "复制 API 密钥",
+      "copyUrl": "复制基础 URL",
+      "launch": "启动 ClawLite",
+      "logout": "退出登录"
+    },
+    "footer": {
+      "secure": "您的数据已加密保护"
+    }
   }
 }

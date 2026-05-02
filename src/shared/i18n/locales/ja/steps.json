@@ -170,5 +170,96 @@
       "available": "ポート18789は使用可能",
       "failed": "ポートの確認に失敗しました"
     }
+  },
+  "activation": {
+    "title": "ClawRouter を有効化",
+    "desc": "このインストーラーを ClawLite アカウントにバインドし、必要に応じて購入 المفتاحを押して OpenClaw を自動構成します。",
+    "statusLabel": "有効化ステータス",
+    "loading": "インストーラーセッションを解決中...",
+    "refresh": "更新",
+    "recommended": "推奨",
+    "accountBound": "インストーラーセッションは {{emailMasked}} にバインド済み",
+    "phase": {
+      "session_binding_pending": "ダウンロードセッションを解決中",
+      "ready_for_activation": "有効化準備完了",
+      "purchase_pending": "購入確認を待機中",
+      "provisioning": "ClawRouter 認証情報をバインド中",
+      "config_injection": "OpenClaw 設定パッチを準備中",
+      "validation": "ClawRouter 接続をテスト中",
+      "completed": "ClawRouter が接続されました",
+      "skipped_to_byok": "既存の API キーで続行",
+      "manual_path_only": "アカウントバインドは利用不可、B YOK のみ",
+      "error": "有効化に attention が必要です"
+    },
+    "paths": {
+      "connectTitle": "すでに購入済み",
+      "connectDesc": "ClawRouter/EZRouter を既にお持ちの場合は、今すぐ接続してください。",
+      "connectCta": "すでに購入済み",
+      "buyTitle": "割引で ClawRouter を購入",
+      "buyDesc": "割引 ClawRouter チェックアウトを使用して素早く開始。",
+      "buyCta": "割引で ClawRouter を購入",
+      "ownKeyTitle": "自有 API キーを使用",
+      "ownKeyDesc": "自有キーを使用して ClawRouter バインドをスキップ。",
+      "ownKeyCta": "自有 API キーを使用"
+    },
+    "summary": {
+      "title": "プロビジョニングサマリー",
+      "binding": "認証情報参照：{{credentialRef}}",
+      "target": "設定ターゲット：{{configTarget}}"
+    },
+    "errors": {
+      "bootstrap": "インストーラーセッションの解決に失敗しました。",
+      "generic": "有効化に失敗しました。再試行するか、自有 API キーで続行してください。"
+    },
+    "email": {
+      "title": "ClawLite を有効化",
+      "subtitle": "確認コードを受け取るために登録メールアドレスを入力してください",
+      "placeholder": "your@email.com",
+      "sendCode": "確認コードを送信",
+      "invalid": "有効なメールアドレスを入力してください",
+      "sending": "送信中..."
+    },
+    "verify": {
+      "title": "コードを入力",
+      "subtitle": "{{email}} に6桁のコードを送信しました",
+      "changeEmail": "メールアドレスを変更",
+      "resend": "コードを再送信",
+      "resendCooldown": "{{secs}}秒後に再送信可能",
+      "verifying": "確認中...",
+      "invalidCode": "確認コードが無効です"
+    },
+    "topup": {
+      "title": "クレジットを追加",
+      "subtitle": "アカウントにクレジットがありません。ClawLite を有効化するにはクレジットを追加してください。",
+      "amount5": "$5",
+      "amount10": "$10",
+      "amount20": "$20",
+      "credits": "クレジット",
+      "back": "戻る"
+    },
+    "pendingTopup": {
+      "title": "支払いを完了",
+      "subtitle": "開いたブラウザで支払いを完了してください。",
+      "hint": "支払い完了後、ここに戻ってください——有効化は自動的に続行されます。",
+      "checking": "支払いステータスを確認中...",
+      "cancel": "キャンセル"
+    },
+    "activated": {
+      "title": "有効化済み！",
+      "subtitle": "ClawLite の準備ができました",
+      "email": "アカウント",
+      "balance": "残高",
+      "license": "ライセンス",
+      "expires": "有効期限",
+      "apiKey": "API キー",
+      "baseUrl": "ベース URL",
+      "copyKey": "API キーをコピー",
+      "copyUrl": "ベース URL をコピー",
+      "launch": "ClawLite を起動",
+      "logout": "サインアウト"
+    },
+    "footer": {
+      "secure": "データは暗号化され安全に保護されています"
+    }
   }
 }
