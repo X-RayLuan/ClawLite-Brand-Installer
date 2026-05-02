@@ -244,57 +244,6 @@ const createBaseSnapshot = (
 const cloneSnapshot = (snapshot: ActivationFlowSnapshot): ActivationFlowSnapshot =>
   JSON.parse(JSON.stringify(snapshot)) as ActivationFlowSnapshot
 
-function setDefaultAgentModelRoute(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  cfg: any,
-  primaryModel: string
-): void {
-  cfg.agents = cfg.agents ?? {}
-  cfg.agents.defaults = cfg.agents.defaults ?? {}
-
-  const currentModel = cfg.agents.defaults.model && typeof cfg.agents.defaults.model === 'object'
-    ? cfg.agents.defaults.model
-    : {}
-  const existingFallbacks = Array.isArray(currentModel.fallbacks)
-    ? currentModel.fallbacks.filter((value: unknown): value is string => typeof value === 'string' && value !== primaryModel)
-    : []
-
-  cfg.agents.defaults.model = {
-    ...currentModel,
-    primary: primaryModel,
-    fallbacks: existingFallbacks
-  }
-
-  const currentAllowlist =
-    cfg.agents.defaults.models && typeof cfg.agents.defaults.models === 'object'
-      ? cfg.agents.defaults.models
-      : {}
-
-  cfg.agents.defaults.models = {
-    ...currentAllowlist,
-    [primaryModel]: currentAllowlist[primaryModel] ?? {}
-  }
-
-  if (Array.isArray(cfg.agents.list)) {
-    const mainAgent = cfg.agents.list.find(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (agent: any) => agent && agent.id === 'main' && agent.model && typeof agent.model === 'object'
-    )
-
-    if (mainAgent) {
-      const mainFallbacks = Array.isArray(mainAgent.model.fallbacks)
-        ? mainAgent.model.fallbacks.filter((value: unknown): value is string => typeof value === 'string' && value !== primaryModel)
-        : []
-
-      mainAgent.model = {
-        ...mainAgent.model,
-        primary: primaryModel,
-        fallbacks: mainFallbacks
-      }
-    }
-  }
-}
-
 export class ActivationController {
   private snapshot: ActivationFlowSnapshot | null = null
 
@@ -561,7 +510,7 @@ export class ActivationController {
 
     const writeConfigToDisk = async (
       targetPath: string,
-      patchProvider: string,
+      _patchProvider: string,
       patchCredentialRef: string,
       _patchModel: string
     ): Promise<void> => {
@@ -599,24 +548,37 @@ export class ActivationController {
       const cfg = ocConfig as any
       if (!cfg.models) cfg.models = { mode: 'merge', providers: {} }
       if (!cfg.models.providers) cfg.models.providers = {}
-      cfg.models.providers[patchProvider] = {
-        baseUrl: 'https://openrouter.ezsite.ai/api/claude',
-        apiKey: patchCredentialRef,
-        api: 'anthropic-messages',
+      // Write to 'clawlite' provider (matches ClawLite-Installer behavior)
+      const resolvedApiKey = patchCredentialRef && !patchCredentialRef.startsWith('{') ? patchCredentialRef : ''
+      cfg.models.providers.clawlite = {
+        baseUrl: 'https://clawlite.ai/api/openai/v1',
+        apiKey: resolvedApiKey,
+        api: 'openai-completions',
         models: [
           {
-            id: 'claude-sonnet-4-6',
-            name: 'Claude Sonnet 4.6 (ClawRouter)',
-            reasoning: false,
-            input: ['text'],
+            id: 'gpt-5.4',
+            name: 'GPT-5.4',
+            input: ['text', 'image'],
+            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
             contextWindow: 200000,
-            maxTokens: 64000
+            maxTokens: 32000,
+            reasoning: true
           }
         ]
       }
 
-      if (patchProvider === 'clawrouter') {
-        setDefaultAgentModelRoute(cfg, 'clawrouter/claude-sonnet-4-6')
+      // Set default agent to clawlite — use agents.defaults.model (OpenClaw format)
+      cfg.agents = cfg.agents || {}
+      cfg.agents.defaults = cfg.agents.defaults || {}
+      cfg.agents.defaults.model = 'clawlite/gpt-5.4'
+      cfg.agents.default = cfg.agents.default || {}
+      cfg.agents.default.provider = 'clawlite'
+
+      // Generate and write gateway token if not already present
+      if (!cfg.gateway) cfg.gateway = {}
+      if (!cfg.gateway.auth) cfg.gateway.auth = {}
+      if (!cfg.gateway.auth.token) {
+        cfg.gateway.auth.token = require('crypto').randomBytes(32).toString('hex')
       }
 
       const serialized = JSON.stringify(ocConfig, null, 2)
