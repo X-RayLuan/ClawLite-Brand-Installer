@@ -471,12 +471,20 @@ export default function ActivationStep({
       setPendingEmail(inputEmail)
       setOtpError(null)
       setCooldownSecs(60)
-      const result = await sendOtp(inputEmail)
-      if (result.ok) {
-        setOtpView('verify')
-      } else {
-        setOtpError(result.error || 'Failed to send code')
+      setWorking(true)
+      try {
+        const result = await sendOtp(inputEmail)
+        if (result.ok) {
+          setOtpView('verify')
+        } else {
+          setOtpError(result.error || 'Failed to send code')
+          setCooldownSecs(0)
+        }
+      } catch {
+        setOtpError('Failed to send code. Check your connection and try again.')
         setCooldownSecs(0)
+      } finally {
+        setWorking(false)
       }
     },
     []
@@ -490,6 +498,7 @@ export default function ActivationStep({
         const result = await verifyOtp(pendingEmail, code)
         if (!result.ok) {
           setOtpError(result.error || t('activation.verify.invalidCode'))
+          setWorking(false)
           return
         }
         // OTP verified — proceed to bootstrap
