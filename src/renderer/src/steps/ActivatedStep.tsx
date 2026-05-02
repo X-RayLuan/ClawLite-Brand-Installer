@@ -11,8 +11,8 @@ function maskApiKey(key: string): string {
 interface Props {
   info: {
     email: string
-    licenseType: LicenseType
-    expiresAt: string | null
+    licenseType?: LicenseType
+    expiresAt?: string | null
     apiKey: string
     baseUrl: string
     balanceUsd?: number

@@ -149,8 +149,7 @@ function VerifyStep({
       next[i] = pasted[i] || ''
     }
     setCode(next)
-    const lastFilled = Math.min(pasted.length - 1, 5)
-    inputsRef.current[lastFilled]?.focus()
+    inputsRef.current[Math.min(pasted.length - 1, 5)]?.focus()
   }
 
   return (
@@ -265,13 +264,14 @@ function TopupStep({
   )
 }
 
-// ─── Sub-component: Pending Topup Step ───────────────────────────────────────
+// ─── Sub-component: Pending Topup Step ────────────────────────────────────────
 function PendingTopupStep({ onCancel }: { onCancel: () => void }): React.JSX.Element {
   const { t } = useTranslation('steps')
   return (
     <div className="flex flex-col items-center gap-5 w-full max-w-sm mx-auto">
       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="animate-spin" style={{ animationDuration: '2s' }}>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 2s linear infinite' }}>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           <circle cx="12" cy="12" r="10" stroke="var(--color-primary)" strokeWidth="2" strokeDasharray="30 60" strokeLinecap="round" />
         </svg>
       </div>
@@ -288,17 +288,9 @@ function PendingTopupStep({ onCancel }: { onCancel: () => void }): React.JSX.Ele
   )
 }
 
-// ─── Sub-component: Activated Step ──────────────────────────────────────────
-// ─── OTP View type ────────────────────────────────────────────────────────────
-type OtpView = 'buy' | 'email' | 'verify' | 'topup' | 'pending_topup' | 'activated'
+// ─── OTP overlay view type ────────────────────────────────────────────────────
+type OtpView = 'buy' | 'email' | 'verify' | 'topup' | 'pending_topup'
 
-// ─── Email-verified activation info (stored during OTP flow) ─────────────────
-interface EmailActivationInfo {
-  email: string
-  apiKey: string
-  baseUrl: string
-  balanceUsd?: number
-}
 // ─── Main Component ────────────────────────────────────────────────────────────
 interface Props {
   appVersion: string
@@ -322,12 +314,11 @@ export default function ActivationStep({
   const [manualKeyProvider, setManualKeyProvider] = useState<'clawrouter' | 'ezrouter'>('clawrouter')
   const [manualKeyInput, setManualKeyInput] = useState('')
 
-  // ── OTP flow state ────────────────────────────────────────────────────────
+  // ── OTP flow state ──────────────────────────────────────────────────────────
   const [otpView, setOtpView] = useState<OtpView>('buy')
   const [pendingEmail, setPendingEmail] = useState('')
   const [cooldownSecs, setCooldownSecs] = useState(0)
   const [otpError, setOtpError] = useState<string | null>(null)
-  const [_emailActivationInfo, _setEmailActivationInfo] = useState<EmailActivationInfo | null>(null)
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const bootstrap = useCallback(
@@ -463,6 +454,8 @@ export default function ActivationStep({
     }
   }, [cooldownSecs > 0])
 
+  // ── OTP Flow handlers ──────────────────────────────────────────────────────
+
   const handleOtpSendCode = useCallback(
     async (inputEmail: string): Promise<void> => {
       setPendingEmail(inputEmail)
@@ -489,7 +482,7 @@ export default function ActivationStep({
           setOtpError(result.error || t('activation.verify.invalidCode'))
           return
         }
-        // OTP verified — proceed to bootstrap → provisioning
+        // OTP verified — proceed to bootstrap
         const snap = await bootstrap(pendingEmail)
         if (!snap) {
           setOtpError(t('activation.errors.bootstrap'))
@@ -499,12 +492,6 @@ export default function ActivationStep({
         if (snap.purchase.entitlement === 'active') {
           if (snap.phase === 'provisioning' || snap.phase === 'config_injection' || snap.phase === 'validation') {
             await runProvisioningChain(snap)
-            setEmailActivationInfo({
-              email: pendingEmail,
-              apiKey: snap.provisioning?.credentialRef || '',
-              baseUrl: 'https://clawlite.ai/api/openai/v1',
-            })
-            setOtpView('activated')
           } else if (snap.phase === 'purchase_pending') {
             const next = await window.electronAPI.activation.startPurchase({ path: 'buy_and_connect' })
             setSnapshot(next)
@@ -512,29 +499,16 @@ export default function ActivationStep({
               await window.electronAPI.system.openExternal(next.purchase.checkoutUrl)
             } else if (next.phase === 'provisioning') {
               await runProvisioningChain(next)
-              setEmailActivationInfo({
-                email: pendingEmail,
-                apiKey: next.provisioning?.credentialRef || '',
-                baseUrl: 'https://clawlite.ai/api/openai/v1',
-              })
-              setOtpView('activated')
             }
           } else if (snap.phase === 'ready_for_activation') {
             let snap2 = await window.electronAPI.activation.provision({ deviceLabel: 'ClawLite Installer' })
             setSnapshot(snap2)
             if (snap2.phase === 'provisioning' || snap2.phase === 'config_injection' || snap2.phase === 'validation') {
               await runProvisioningChain(snap2)
-              setEmailActivationInfo({
-                email: pendingEmail,
-                apiKey: snap2.provisioning?.credentialRef || '',
-                baseUrl: 'https://clawlite.ai/api/openai/v1',
-              })
-              setOtpView('activated')
             } else if (snap2.phase === 'error') {
               setOtpError(snap2.errorMessage || t('activation.errors.generic'))
             }
           }
-          // Fall through: provisioning chain handles completion / parent handles next step
         } else {
           // No active entitlement → show topup
           setOtpView('topup')
@@ -565,12 +539,6 @@ export default function ActivationStep({
           setOtpView('pending_topup')
         } else if (next.phase === 'provisioning') {
           await runProvisioningChain(next)
-          setEmailActivationInfo({
-            email: pendingEmail,
-            apiKey: next.provisioning?.credentialRef || '',
-            baseUrl: 'https://clawlite.ai/api/openai/v1',
-          })
-          setOtpView('activated')
         }
       } finally {
         setWorking(false)
@@ -584,7 +552,7 @@ export default function ActivationStep({
     setWorking(false)
   }, [])
 
-  // ── Existing Buy ClawRouter handler ───────────────────────────────────────
+  // ── Buy ClawRouter handler ─────────────────────────────────────────────────
 
   const handleBuyClick = async (): Promise<void> => {
     setWorking(true)
@@ -668,7 +636,7 @@ export default function ActivationStep({
 
   const checkoutPending = snapshot?.phase === 'purchase_pending'
 
-  // ── Render OTP overlay when email/verify/topup flow is active ─────────────
+  // ── OTP overlay (email / verify / topup flow) ─────────────────────────────
   if (otpView !== 'buy') {
     return (
       <div className="flex-1 flex flex-col min-h-0 px-8 pt-6 pb-6">
@@ -706,21 +674,6 @@ export default function ActivationStep({
             {otpView === 'pending_topup' && (
               <PendingTopupStep onCancel={handleOtpPendingCancel} />
             )}
-            {otpView === 'activated' && emailActivationInfo && (
-              <ActivatedStep
-                info={emailActivationInfo}
-                onLaunch={function (): void {
-                  setOtpView('buy')
-                  setEmailActivationInfo(null)
-                  onActivationComplete()
-                }}
-                onLogout={function (): void {
-                  setOtpView('email')
-                  setEmailActivationInfo(null)
-                }}
-                loading={working}
-              />
-            )}
           </div>
 
           {otpView !== 'pending_topup' && (
@@ -737,7 +690,7 @@ export default function ActivationStep({
     )
   }
 
-  // ── Default: show buy cards ────────────────────────────────────────────────
+  // ── Default: show buy / connect cards ─────────────────────────────────────
   return (
     <div className="flex-1 flex flex-col min-h-0 px-8 pt-6 pb-6">
       <div className="flex-1 overflow-y-auto pb-10 space-y-4">
