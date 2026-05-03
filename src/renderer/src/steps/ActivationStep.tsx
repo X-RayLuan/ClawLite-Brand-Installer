@@ -322,6 +322,7 @@ export default function ActivationStep({
   const [pendingEmail, setPendingEmail] = useState('')
   const [cooldownSecs, setCooldownSecs] = useState(0)
   const [otpError, setOtpError] = useState<string | null>(null)
+  const [pendingTopupAttempts, setPendingTopupAttempts] = useState(0)
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const bootstrap = useCallback(
@@ -423,6 +424,42 @@ export default function ActivationStep({
     }, 3000)
     return () => clearInterval(interval)
   }, [snapshot?.phase, runProvisioningChain])
+
+  useEffect(() => {
+    if (otpView !== 'pending_topup') return
+    let cancelled = false
+
+    const poll = async (): Promise<void> => {
+      try {
+        const next = await window.electronAPI.activation.confirmPurchase()
+        if (cancelled) return
+
+        setSnapshot(next)
+        setPendingTopupAttempts((count) => count + 1)
+
+        if (next.phase === 'provisioning' || next.phase === 'config_injection' || next.phase === 'validation') {
+          await runProvisioningChain(next)
+          return
+        }
+
+        if (next.phase === 'error') {
+          setOtpError(next.errorMessage || t('activation.errors.generic'))
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setOtpError(e instanceof Error ? e.message : t('activation.errors.generic'))
+          setPendingTopupAttempts((count) => count + 1)
+        }
+      }
+    }
+
+    void poll()
+    const interval = setInterval(() => void poll(), 3000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [otpView, runProvisioningChain, t])
 
   useEffect(() => {
     if (!shouldAutoResumeProvisioning(snapshot) || working) return
@@ -560,6 +597,8 @@ export default function ActivationStep({
         setSnapshot(next)
         if (next.phase === 'purchase_pending' && next.purchase.checkoutUrl) {
           await window.electronAPI.system.openExternal(next.purchase.checkoutUrl)
+          setOtpError(null)
+          setPendingTopupAttempts(0)
           setOtpView('pending_topup')
         } else if (next.phase === 'provisioning') {
           await runProvisioningChain(next)
@@ -697,6 +736,16 @@ export default function ActivationStep({
             )}
             {otpView === 'pending_topup' && (
               <PendingTopupStep onCancel={handleOtpPendingCancel} />
+            )}
+            {otpView === 'pending_topup' && otpError && (
+              <p className="text-xs text-error font-medium text-center bg-error/10 px-3 py-2 rounded-xl border border-error/20">
+                {otpError}
+              </p>
+            )}
+            {otpView === 'pending_topup' && pendingTopupAttempts > 0 && !otpError && (
+              <p className="text-[10px] text-text-muted/40 text-center">
+                Checked payment status {pendingTopupAttempts} time{pendingTopupAttempts === 1 ? '' : 's'}.
+              </p>
             )}
           </div>
 
