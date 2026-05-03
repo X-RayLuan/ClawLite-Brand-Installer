@@ -4,7 +4,7 @@ import Button from '../components/Button'
 import type { ActivationFlowSnapshot } from '@shared/activation/types'
 import { shouldAutoResumeProvisioning } from './activation-flow-helpers'
 import { getConfirmPurchaseErrorMessage } from './activation-purchase-feedback'
-import { sendOtp, verifyOtp } from './otp-api'
+import { formatOtpApiError, sendOtp, verifyOtp } from './otp-api'
 
 // ─── Sub-component: Email Step ────────────────────────────────────────────────
 function EmailStep({
@@ -483,8 +483,8 @@ export default function ActivationStep({
           setOtpError(result.error || 'Failed to send code')
           setCooldownSecs(0)
         }
-      } catch {
-        setOtpError('Failed to send code. Check your connection and try again.')
+      } catch (err) {
+        setOtpError(formatOtpApiError(err))
         setCooldownSecs(0)
       } finally {
         setWorking(false)
