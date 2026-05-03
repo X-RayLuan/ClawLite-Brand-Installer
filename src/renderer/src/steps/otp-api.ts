@@ -3,9 +3,8 @@
  */
 
 const API_BASE = (() => {
-  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return 'http://localhost:3000/api'
-  }
+  const override = import.meta.env.VITE_CLAWLITE_API_BASE?.trim()
+  if (override) return override.replace(/\/$/, '')
   return 'https://clawlite.ai/api'
 })()
 
