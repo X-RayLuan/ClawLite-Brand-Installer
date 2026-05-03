@@ -40,6 +40,24 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return data as T
 }
 
+export function formatOtpApiError(error: unknown): string {
+  if (!(error instanceof Error)) return 'Failed to send code. Check your connection and try again.'
+
+  const status = (error as any)._status
+  const bodyError = (error as any)._body?.error
+  const message = bodyError || error.message
+
+  if (status === 404) {
+    return 'Verification service is missing on clawlite.ai (HTTP 404). Please update the ClawLite backend deployment.'
+  }
+
+  if (status) {
+    return `Verification service failed (${status}): ${message}`
+  }
+
+  return message || 'Failed to send code. Check your connection and try again.'
+}
+
 export interface OtpSendResult {
   ok: boolean
   error?: string
