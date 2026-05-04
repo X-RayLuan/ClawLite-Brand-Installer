@@ -384,7 +384,11 @@ export default function ActivationStep({
           next.errorMessage = undefined
           setSnapshot(next)
         } else {
-          next = await window.electronAPI.activation.provision({ deviceLabel: 'ClawLite Installer' })
+          next = await withTimeout(
+            window.electronAPI.activation.provision({ deviceLabel: 'ClawLite Installer' }),
+            20000,
+            'activation:provision'
+          )
           setSnapshot(next)
         }
       }
@@ -396,10 +400,14 @@ export default function ActivationStep({
         // Pass apiKey from verify-otp directly to injectConfig so it doesn't
         // have to rely on provisioning.credentialRef (which may be empty when
         // the backend provision call was skipped)
-        next = await window.electronAPI.activation.injectConfig({
-          targetConfigPath: platform === 'windows' ? '/root/.openclaw/openclaw.json' : '~/.openclaw/openclaw.json',
-          apiKey: apiKey || undefined
-        })
+        next = await withTimeout(
+          window.electronAPI.activation.injectConfig({
+            targetConfigPath: platform === 'windows' ? '/root/.openclaw/openclaw.json' : '~/.openclaw/openclaw.json',
+            apiKey: apiKey || undefined
+          }),
+          20000,
+          'activation:injectConfig'
+        )
         setSnapshot(next)
       }
       if (next.phase === 'error') {
@@ -407,7 +415,11 @@ export default function ActivationStep({
         return
       }
       if (next.phase === 'validation') {
-        next = await window.electronAPI.activation.validate({ expectGatewayReachable: true })
+        next = await withTimeout(
+          window.electronAPI.activation.validate({ expectGatewayReachable: true }),
+          20000,
+          'activation:validate'
+        )
         setSnapshot(next)
       }
       if (next.phase === 'completed') {
@@ -426,7 +438,7 @@ export default function ActivationStep({
       }
       setError(next.errorMessage || 'Activation could not continue after payment')
     },
-    [onActivationComplete, platform]
+    [onActivationComplete, platform, snapshot, email]
   )
 
   // Auto-poll purchase-state when checkout is pending
@@ -554,6 +566,17 @@ export default function ActivationStep({
     []
   )
 
+  // Wraps a promise with a timeout so the UI never hangs indefinitely on a
+  // stalled IPC call. If the timeout fires, the wrapped promise rejects with
+  // a descriptive error.
+  const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+    let timeoutId: ReturnType<typeof setTimeout>
+    const timeout = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error(`[timeout ${ms}ms] ${label}`)), ms)
+    })
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId!)) as Promise<T>
+  }
+
   const handleOtpVerify = useCallback(
     async (code: string): Promise<void> => {
       setOtpError(null)
@@ -566,7 +589,12 @@ export default function ActivationStep({
           return
         }
         // OTP verified — proceed to bootstrap using accountId from verify response (not email)
-        const snap = await bootstrap(result.accountId!)
+        // Guard with a timeout so a stalled IPC call never hangs the UI.
+        const snap = await withTimeout(
+          bootstrap(result.accountId!),
+          25000,
+          'activation:bootstrap after OTP verify'
+        )
         if (!snap) {
           setOtpError(t('activation.errors.bootstrap'))
           setWorking(false)
@@ -577,7 +605,11 @@ export default function ActivationStep({
           if (snap.phase === 'provisioning' || snap.phase === 'config_injection' || snap.phase === 'validation') {
             await runProvisioningChain(snap)
           } else if (snap.phase === 'purchase_pending') {
-            const next = await window.electronAPI.activation.startPurchase({ path: 'buy_and_connect' })
+            const next = await withTimeout(
+              window.electronAPI.activation.startPurchase({ path: 'buy_and_connect' }),
+              20000,
+              'activation:startPurchase'
+            )
             setSnapshot(next)
             if (next.phase === 'purchase_pending' && next.purchase.checkoutUrl) {
               await window.electronAPI.system.openExternal(next.purchase.checkoutUrl)
@@ -590,14 +622,29 @@ export default function ActivationStep({
             // and uses the apiKey directly for config injection
             ;(snap as any).apiKey = result.apiKey || null
             ;(snap as any).accountId = result.accountId || null
-            await runProvisioningChain(snap)
+            try {
+              await runProvisioningChain(snap)
+            } catch (err) {
+              setOtpError(err instanceof Error ? err.message : t('activation.errors.generic'))
+            }
+          } else {
+            // Unhandled phase after active entitlement — show error instead of silently hanging
+            setOtpError(
+              `Unexpected activation phase after purchase: ${snap.phase}. Please try again or use a different activation method.`
+            )
           }
         } else {
           // No active entitlement → show topup
           setOtpView('topup')
         }
       } catch (err) {
-        setOtpError(err instanceof Error ? err.message : t('activation.errors.generic'))
+        const msg = err instanceof Error ? err.message : t('activation.errors.generic')
+        // Don't overwrite if it's already an informative timeout message
+        if (!err || !((err as any).message || '').includes('[timeout')) {
+          setOtpError(msg)
+        } else {
+          setOtpError(msg)
+        }
       } finally {
         setWorking(false)
       }
