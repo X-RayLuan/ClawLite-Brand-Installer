@@ -569,6 +569,7 @@ export default function ActivationStep({
         const snap = await bootstrap(result.accountId!)
         if (!snap) {
           setOtpError(t('activation.errors.bootstrap'))
+          setWorking(false)
           return
         }
         // If active entitlement → run provisioning chain → done
@@ -595,6 +596,8 @@ export default function ActivationStep({
           // No active entitlement → show topup
           setOtpView('topup')
         }
+      } catch (err) {
+        setOtpError(err instanceof Error ? err.message : t('activation.errors.generic'))
       } finally {
         setWorking(false)
       }
@@ -626,6 +629,8 @@ export default function ActivationStep({
         } else if (next.phase === 'provisioning') {
           await runProvisioningChain(next)
         }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Topup failed')
       } finally {
         setWorking(false)
       }
