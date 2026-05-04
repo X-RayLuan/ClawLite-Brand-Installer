@@ -130,6 +130,9 @@ export interface ActivationProvisionInput {
 
 export interface ActivationConfigInjectionInput {
   targetConfigPath: string
+  /** Optional apiKey override — allows passing the key directly from verify-otp
+   *  instead of relying on provisioning.credentialRef */
+  apiKey?: string
 }
 
 export interface ActivationValidationInput {

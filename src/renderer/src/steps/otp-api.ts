@@ -69,6 +69,8 @@ export interface OtpVerifyResult {
   isActive?: boolean
   error?: string
   balance?: number
+  apiKey?: string
+  baseUrl?: string
 }
 
 export async function sendOtp(email: string): Promise<OtpSendResult> {

@@ -363,18 +363,42 @@ export default function ActivationStep({
 
   const runProvisioningChain = useCallback(
     async (current: ActivationFlowSnapshot): Promise<void> => {
+      const apiKey = (current as any).apiKey as string | undefined
       let next = current
+      // Use apiKey from verify-otp directly if available (avoids backend provision call
+      // which may fail when setupToken has no associated checkout session)
       if (next.phase === 'provisioning') {
-        next = await window.electronAPI.activation.provision({ deviceLabel: 'ClawLite Installer' })
-        setSnapshot(next)
+        if (apiKey) {
+          // Skip backend provision — use the apiKey already returned by verify-otp
+          next = { ...next }
+          next.phase = 'config_injection'
+          next.provisioning = {
+            status: 'bound',
+            bindingId: `clawrouter-account:${(current as any).accountId || current.binding?.account?.accountId || 'unknown'}`,
+            credentialRef: apiKey,
+            provider: 'clawrouter',
+            model: 'clawrouter/auto',
+            configuredAt: new Date().toISOString()
+          }
+          next.nextActionLabel = 'Write OpenClaw Configuration'
+          next.errorMessage = undefined
+          setSnapshot(next)
+        } else {
+          next = await window.electronAPI.activation.provision({ deviceLabel: 'ClawLite Installer' })
+          setSnapshot(next)
+        }
       }
       if (next.phase === 'error') {
         setError(next.errorMessage || 'Provisioning failed')
         return
       }
       if (next.phase === 'config_injection') {
+        // Pass apiKey from verify-otp directly to injectConfig so it doesn't
+        // have to rely on provisioning.credentialRef (which may be empty when
+        // the backend provision call was skipped)
         next = await window.electronAPI.activation.injectConfig({
-          targetConfigPath: platform === 'windows' ? '/root/.openclaw/openclaw.json' : '~/.openclaw/openclaw.json'
+          targetConfigPath: platform === 'windows' ? '/root/.openclaw/openclaw.json' : '~/.openclaw/openclaw.json',
+          apiKey: apiKey || undefined
         })
         setSnapshot(next)
       }
@@ -388,13 +412,13 @@ export default function ActivationStep({
       }
       if (next.phase === 'completed') {
         // Save activation state to activation.json before completing
-        const apiKey = snapshot?.provisioning?.credentialRef || ''
+        const savedApiKey = apiKey || snapshot?.provisioning?.credentialRef || ''
         const baseUrl = 'https://clawlite.ai/api/openai/v1'
         void window.electronAPI.activation.save({
           email: email || '',
           licenseType: 'unknown',
           expiresAt: null,
-          apiKey,
+          apiKey: savedApiKey,
           baseUrl
         })
         onActivationComplete()
@@ -560,13 +584,12 @@ export default function ActivationStep({
               await runProvisioningChain(next)
             }
           } else if (snap.phase === 'ready_for_activation') {
-            let snap2 = await window.electronAPI.activation.provision({ deviceLabel: 'ClawLite Installer' })
-            setSnapshot(snap2)
-            if (snap2.phase === 'provisioning' || snap2.phase === 'config_injection' || snap2.phase === 'validation') {
-              await runProvisioningChain(snap2)
-            } else if (snap2.phase === 'error') {
-              setOtpError(snap2.errorMessage || t('activation.errors.generic'))
-            }
+            // Pass the apiKey from verify-otp directly into the snapshot so runProvisioningChain
+            // skips the backend provision call (which requires a valid setupToken checkout session)
+            // and uses the apiKey directly for config injection
+            ;(snap as any).apiKey = result.apiKey || null
+            ;(snap as any).accountId = result.accountId || null
+            await runProvisioningChain(snap)
           }
         } else {
           // No active entitlement → show topup

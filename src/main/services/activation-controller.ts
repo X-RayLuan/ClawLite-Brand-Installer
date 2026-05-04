@@ -498,7 +498,8 @@ export class ActivationController {
 
   async injectConfig(input: ActivationConfigInjectionInput): Promise<ActivationFlowSnapshot> {
     const snapshot = this.requireSnapshot()
-    const credentialRef = snapshot.provisioning.credentialRef
+    // Prefer apiKey passed directly from verify-otp, fall back to provisioning.credentialRef
+    const credentialRef = input.apiKey ?? snapshot.provisioning.credentialRef
     const model = snapshot.provisioning.model
     const bindingId = snapshot.provisioning.bindingId
 
