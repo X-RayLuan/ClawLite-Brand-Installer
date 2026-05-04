@@ -588,10 +588,15 @@ export default function ActivationStep({
           setWorking(false)
           return
         }
+        if (!result.accountId) {
+          setOtpError('Verification succeeded but no account ID returned. Please try again or contact support.')
+          setWorking(false)
+          return
+        }
         // OTP verified — proceed to bootstrap using accountId from verify response (not email)
         // Guard with a timeout so a stalled IPC call never hangs the UI.
         const snap = await withTimeout(
-          bootstrap(result.accountId!),
+          bootstrap(result.accountId),
           25000,
           'activation:bootstrap after OTP verify'
         )
@@ -639,12 +644,7 @@ export default function ActivationStep({
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : t('activation.errors.generic')
-        // Don't overwrite if it's already an informative timeout message
-        if (!err || !((err as any).message || '').includes('[timeout')) {
-          setOtpError(msg)
-        } else {
-          setOtpError(msg)
-        }
+        setOtpError(msg)
       } finally {
         setWorking(false)
       }
