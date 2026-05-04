@@ -8,7 +8,9 @@ export function shouldAutoResumeProvisioning(
   return (
     snapshot.phase === 'ready_for_activation' &&
     snapshot.purchase.entitlement === 'active' &&
-    snapshot.recommendedPath === 'connect_existing_purchase' &&
-    snapshot.allowedPaths.includes('connect_existing_purchase')
+    (snapshot.recommendedPath === 'connect_existing_purchase' ||
+      snapshot.recommendedPath === 'connect_now') &&
+    (snapshot.allowedPaths.includes('connect_existing_purchase') ||
+      snapshot.allowedPaths.includes('connect_now'))
   )
 }

@@ -541,8 +541,8 @@ export default function ActivationStep({
           setWorking(false)
           return
         }
-        // OTP verified — proceed to bootstrap
-        const snap = await bootstrap(pendingEmail)
+        // OTP verified — proceed to bootstrap using accountId from verify response (not email)
+        const snap = await bootstrap(result.accountId!)
         if (!snap) {
           setOtpError(t('activation.errors.bootstrap'))
           return
