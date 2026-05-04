@@ -1,6 +1,6 @@
 export type ActivationPlatform = 'macos' | 'windows' | 'linux' | 'unknown'
 
-export type ActivationPath = 'connect_existing_purchase' | 'buy_and_connect' | 'use_own_key'
+export type ActivationPath = 'connect_existing_purchase' | 'buy_and_connect' | 'use_own_key' | 'connect_now'
 
 export type ActivationBackendMode = 'mock' | 'remote'
 
