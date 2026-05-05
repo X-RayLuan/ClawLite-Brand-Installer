@@ -160,6 +160,51 @@ export const registerIpcHandlers = (getWin: () => BrowserWindow | null): void =>
     }
   })
 
+  // ─── installer:activate.json persistence (post-OTP-verification) ────────────────
+  const getActivatePath = (): string => join(app.getPath('userData'), 'activate.json')
+
+  ipcMain.handle(
+    'installer:save-activate',
+    (
+      _e,
+      data: {
+        accountId: string
+        email: string
+        apiKey: string
+        baseUrl: string
+        balance: number
+      }
+    ) => {
+      try {
+        const payload = { ...data, verifiedAt: new Date().toISOString() }
+        writeFileSync(getActivatePath(), JSON.stringify(payload, null, 2))
+        return { success: true }
+      } catch {
+        return { success: false }
+      }
+    }
+  )
+
+  ipcMain.handle('installer:load-activate', () => {
+    try {
+      const path = getActivatePath()
+      if (!existsSync(path)) return null
+      return JSON.parse(readFileSync(path, 'utf-8'))
+    } catch {
+      return null
+    }
+  })
+
+  ipcMain.handle('installer:clear-activate', () => {
+    try {
+      const path = getActivatePath()
+      if (existsSync(path)) unlinkSync(path)
+      return { success: true }
+    } catch {
+      return { success: false }
+    }
+  })
+
   ipcMain.handle(
     'activation:save',
     (

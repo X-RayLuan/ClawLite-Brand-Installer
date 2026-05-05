@@ -361,6 +361,45 @@ export default function ActivationStep({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // ── Resume from saved activate.json on mount ──────────────────────────────
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const saved = await window.electronAPI.installer.loadActivate()
+        if (cancelled || !saved) return
+        // We have a previously verified activate.json — use it to bootstrap directly
+        const state = await window.electronAPI.activation.bootstrap({
+          installerInstanceId: 'clawlite-installer',
+          platform,
+          appVersion,
+          accountId: saved.accountId
+        })
+        if (cancelled) return
+        setSnapshot(state)
+        if (
+          state.phase === 'provisioning' ||
+          state.phase === 'config_injection' ||
+          state.phase === 'validation'
+        ) {
+          // Inject the saved apiKey into the snapshot so runProvisioningChain
+          // skips the backend provision call and uses it directly
+          ;(state as any).apiKey = saved.apiKey || null
+          ;(state as any).accountId = saved.accountId || null
+          setLoading(false)
+          await runProvisioningChain(state)
+        } else if (state.phase === 'completed') {
+          onActivationComplete()
+        } else {
+          setLoading(false)
+        }
+      } catch {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
   const runProvisioningChain = useCallback(
     async (current: ActivationFlowSnapshot): Promise<void> => {
       const apiKey = (current as any).apiKey as string | undefined
@@ -593,6 +632,15 @@ export default function ActivationStep({
           setWorking(false)
           return
         }
+        // Persist activate.json so subsequent runs can skip the OTP flow
+        void window.electronAPI.installer.saveActivate({
+          accountId: result.accountId,
+          email: pendingEmail,
+          apiKey: result.apiKey || '',
+          baseUrl: result.baseUrl || 'https://clawlite.ai/api/openai/v1',
+          balance: result.balance ?? 0
+        })
+
         // OTP verified — proceed to bootstrap using accountId from verify response (not email)
         // Guard with a timeout so a stalled IPC call never hangs the UI.
         const snap = await withTimeout(
