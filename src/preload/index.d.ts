@@ -170,6 +170,24 @@ interface ElectronAPI {
     getLocale: () => Promise<string>
     setLanguage: (lng: string) => Promise<{ success: boolean; error?: string }>
   }
+  installer: {
+    saveActivate: (data: {
+      accountId: string
+      email: string
+      apiKey: string
+      baseUrl: string
+      balance: number
+    }) => Promise<{ success: boolean }>
+    loadActivate: () => Promise<{
+      accountId: string
+      email: string
+      apiKey: string
+      baseUrl: string
+      balance: number
+      verifiedAt: string
+    } | null>
+    clearActivate: () => Promise<{ success: boolean }>
+  }
 }
 
 declare global {
