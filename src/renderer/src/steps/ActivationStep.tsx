@@ -389,16 +389,25 @@ export default function ActivationStep({
           setLoading(false)
           await runProvisioningChain(state)
         } else if (state.phase === 'completed') {
+          // Activation already finished — dismiss OTP overlay and advance
+          setOtpView('buy')
           onActivationComplete()
         } else {
+          // Some other phase (e.g. purchase_pending, ready_for_activation) —
+          // just dismiss the overlay and let the normal flow handle it
+          setOtpView('buy')
           setLoading(false)
         }
       } catch {
-        if (!cancelled) setLoading(false)
+        if (!cancelled) {
+          setLoading(false)
+          setOtpView('buy')
+        }
       }
     })()
     return () => { cancelled = true }
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onActivationComplete, platform, appVersion])
 
   const runProvisioningChain = useCallback(
     async (current: ActivationFlowSnapshot): Promise<void> => {
@@ -656,6 +665,8 @@ export default function ActivationStep({
         // If active entitlement → run provisioning chain → done
         if (snap.purchase.entitlement === 'active') {
           if (snap.phase === 'provisioning' || snap.phase === 'config_injection' || snap.phase === 'validation') {
+            // Dismiss OTP overlay first so it doesn't briefly re-appear during re-render
+            setOtpView('buy')
             await runProvisioningChain(snap)
           } else if (snap.phase === 'purchase_pending') {
             const next = await withTimeout(
@@ -667,6 +678,7 @@ export default function ActivationStep({
             if (next.phase === 'purchase_pending' && next.purchase.checkoutUrl) {
               await window.electronAPI.system.openExternal(next.purchase.checkoutUrl)
             } else if (next.phase === 'provisioning') {
+              setOtpView('buy')
               await runProvisioningChain(next)
             }
           } else if (snap.phase === 'ready_for_activation') {
@@ -677,6 +689,8 @@ export default function ActivationStep({
             ;(snap as any).accountId = result.accountId || null
             try {
               await runProvisioningChain(snap)
+              // Provisioning succeeded — dismiss OTP overlay and let onActivationComplete navigate
+              setOtpView('buy')
             } catch (err) {
               setOtpError(err instanceof Error ? err.message : t('activation.errors.generic'))
             }
