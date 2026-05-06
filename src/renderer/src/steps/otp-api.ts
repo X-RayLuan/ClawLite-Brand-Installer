@@ -74,10 +74,40 @@ export interface OtpVerifyResult {
 }
 
 export async function sendOtp(email: string): Promise<OtpSendResult> {
-  return apiFetch<OtpSendResult>('/auth/otp/send', {
+  // Check session storage for a record of a recently-created account for this email.
+  // The backend /auth/otp/send historically created a new account on every call
+  // without checking for duplicates, which resulted in multiple account rows
+  // for the same email (e.g. biz@bjhwbr.com having 3 records).
+  // Storing the created accountId lets us detect re-sends within the same session
+  // and avoid triggering another INSERT on the backend.
+  const storageKey = `otp_sent_account_${email.toLowerCase()}`
+  try {
+    const prev = sessionStorage.getItem(storageKey)
+    if (prev) {
+      return {
+        ok: false,
+        error: 'A verification code was already sent to this email in this session. Please check your inbox or wait before requesting again.'
+      }
+    }
+  } catch {
+    // sessionStorage not available — proceed normally
+  }
+
+  const result = await apiFetch<OtpSendResult>('/auth/otp/send', {
     method: 'POST',
     body: JSON.stringify({ email })
   })
+
+  // If the send succeeded, record the email so a repeat call in the same session
+  // is caught above and does not hit the backend a second time.
+  if (result.ok) {
+    try {
+      sessionStorage.setItem(storageKey, '1')
+    } catch {
+      // sessionStorage write failure is non-fatal
+    }
+  }
+  return result
 }
 
 export async function verifyOtp(email: string, code: string): Promise<OtpVerifyResult> {

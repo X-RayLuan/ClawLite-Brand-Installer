@@ -652,6 +652,22 @@ export default function ActivationStep({
 
         // OTP verified — proceed to bootstrap using accountId from verify response (not email)
         // Guard with a timeout so a stalled IPC call never hangs the UI.
+
+        // ── Zero-balance guard ─────────────────────────────────────────────────────
+        // An account can have entitlement === 'active' (subscription is valid) but still
+        // have balance === 0, which means no API credits are available.  In this case
+        // proceeding to runProvisioningChain would set up OpenClaw with a valid-looking
+        // key that will fail at the first API call, frustrating the user.
+        // We detect this from the verify-otp result (which includes balance) and
+        // redirect straight to the topup screen instead.
+        if ((result.balance ?? 0) === 0) {
+          setOtpError(null)
+          setOtpView('topup')
+          setWorking(false)
+          return
+        }
+        // ── End zero-balance guard ────────────────────────────────────────────────
+
         const snap = await withTimeout(
           bootstrap(result.accountId),
           25000,
